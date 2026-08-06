@@ -1,0 +1,11 @@
+# backend/ and frontend/ each have their own .gitignore.
+# These are repo-wide safety nets so a secret can never be committed by accident.
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+
+.idea
+.vscode
+.DS_Store

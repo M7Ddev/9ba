@@ -1,0 +1,9 @@
+node_modules
+dist
+.vite
+
+# No secrets live here any more (the Gemini key is in backend/.env), but the
+# local .env can still hold machine-specific overrides.
+.env
+.env.*
+!.env.example

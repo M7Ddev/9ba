@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="صَبّة">
+  <!-- Coffee brown tile, matching the --brown token in styles.css -->
+  <rect width="32" height="32" rx="7" fill="#6F4E37"/>
+
+  <!-- Cup body: straight sides with a rounded base -->
+  <path d="M9 12h11v7a5.5 5.5 0 0 1-11 0z" fill="#FFFFFF"/>
+
+  <!-- Handle -->
+  <path d="M20 13.5h1.5a3 3 0 0 1 0 5.5H20"
+        fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- Saucer -->
+  <rect x="7" y="25.5" width="15" height="2" rx="1" fill="#FFFFFF"/>
+</svg>

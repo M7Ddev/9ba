@@ -1,0 +1,621 @@
+/*
+  styles.css — BrewMaster AI
+  ---------------------------------------------------------------------------
+  Palette is brown + white/cream only. No gradients, no shadows-as-decoration.
+
+  RTL note: layout uses CSS *logical* properties (margin-inline-start,
+  border-inline-start, text-align: start …) instead of left/right, so the whole
+  page mirrors correctly when <html dir> flips to "ltr".
+*/
+
+:root {
+  --brown: #6f4e37; /* primary coffee brown */
+  --brown-dark: #3b2f2f; /* headings, strong text */
+  --brown-soft: #8a6a50; /* muted brown for secondary text */
+  --cream: #f7f3ef; /* page background */
+  --white: #ffffff; /* panels */
+  --border: #e3d9cf; /* hairlines */
+  --error: #9b3b2f;
+  --success: #4a6b3f;
+
+  --radius: 10px;
+  --gap: 16px;
+
+  color-scheme: light;
+}
+
+/*
+  Dark theme — the same brown family, inverted.
+
+  Every rule in this file already reads these tokens, so the whole app switches
+  by redefining them. The roles stay identical: --cream is still "page", --white
+  is still "panel", --brown-dark is still "strongest text".
+
+  Two selectors on purpose:
+  1. The media query covers a visitor whose OS is dark and who has never chosen
+     — but NOT one who explicitly picked light.
+  2. The attribute selector covers an explicit choice and always wins.
+*/
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --brown: #c9905f;
+    --brown-dark: #f2e8e0;
+    --brown-soft: #ab9184;
+    --cream: #171210;
+    --white: #241d19;
+    --border: #3b302a;
+    --error: #e8907f;
+    --success: #93c07f;
+
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme='dark'] {
+  --brown: #c9905f; /* lightened so it reads as an accent on dark, not a smudge */
+  --brown-dark: #f2e8e0; /* now the lightest value: it is "strongest text", not "dark" */
+  --brown-soft: #ab9184;
+  --cream: #171210; /* page */
+  --white: #241d19; /* panel, one step lighter than the page */
+  --border: #3b302a;
+  --error: #e8907f; /* desaturated: full-strength red vibrates on dark */
+  --success: #93c07f;
+
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/*
+  Applied for a single frame while the theme swaps (see lib/theme.js).
+
+  An element with `transition: background-color` does not repaint correctly when
+  the custom property behind that colour changes — the transition resolves
+  against the stale value and the element keeps its old colour indefinitely.
+  Switching with transitions off sidesteps it; hover fades are unaffected
+  because this class is removed on the next frame.
+*/
+:root.theme-switching *,
+:root.theme-switching *::before,
+:root.theme-switching *::after {
+  transition: none !important;
+}
+
+body {
+  margin: 0;
+  background-color: var(--cream);
+  color: var(--brown-dark);
+  transition: background-color 0.2s ease, color 0.2s ease;
+  font-family: 'Cairo', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- Layout ---------- */
+
+.app {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 24px 16px 64px;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--gap);
+  padding-bottom: 16px;
+  border-bottom: 2px solid var(--brown);
+  margin-bottom: 24px;
+}
+
+.brand {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--brown);
+  letter-spacing: -0.01em;
+}
+
+.tagline {
+  margin: 2px 0 0;
+  font-size: 0.9rem;
+  color: var(--brown-soft);
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.lang-toggle {
+  flex-shrink: 0;
+}
+
+/* Square icon button, sized to match the language toggle's height. */
+.theme-toggle {
+  flex-shrink: 0;
+  padding: 10px 12px;
+  line-height: 1;
+  font-size: 1rem;
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}
+
+/* ---------- Panels ---------- */
+
+.panel {
+  background-color: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.panel-title {
+  margin: 0 0 16px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--brown-dark);
+}
+
+.section-title {
+  margin: 20px 0 8px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--brown);
+}
+
+/* ---------- Form controls ---------- */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--gap);
+  margin-bottom: var(--gap);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--brown-soft);
+}
+
+.input {
+  width: 100%;
+  padding: 10px 12px;
+  font-family: inherit;
+  font-size: 1rem;
+  color: var(--brown-dark);
+  background-color: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  text-align: start;
+}
+
+.input:focus {
+  outline: 2px solid var(--brown);
+  outline-offset: 1px;
+  border-color: var(--brown);
+}
+
+select.input {
+  cursor: pointer;
+}
+
+/* ---------- Buttons ---------- */
+
+.btn {
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  padding: 10px 18px;
+  border-radius: var(--radius);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background-color: var(--brown);
+  color: var(--white);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background-color: var(--brown-dark);
+}
+
+.btn-outline {
+  background-color: var(--white);
+  color: var(--brown);
+  border-color: var(--brown);
+}
+
+.btn-outline:hover:not(:disabled) {
+  background-color: var(--cream);
+}
+
+.btn-ghost {
+  background-color: transparent;
+  color: var(--brown);
+  border-color: var(--border);
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background-color: var(--cream);
+}
+
+.btn-block {
+  width: 100%;
+}
+
+/* ---------- Messages ---------- */
+
+.hint {
+  margin: 10px 0 0;
+  font-size: 0.82rem;
+  color: var(--brown-soft);
+}
+
+.hint-warn {
+  color: var(--brown);
+  font-weight: 600;
+}
+
+/* Language-mismatch prompt: the recipe on screen is in the other language. */
+.notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0;
+  padding: 12px 16px;
+  background-color: var(--white);
+  border: 1px solid var(--border);
+  border-inline-start: 3px solid var(--brown);
+  border-radius: var(--radius);
+  font-size: 0.9rem;
+  color: var(--brown-dark);
+}
+
+.notice-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.btn-small {
+  padding: 6px 14px;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+.error {
+  margin: 0;
+  padding: 12px 16px;
+  background-color: var(--white);
+  border: 1px solid var(--error);
+  border-radius: var(--radius);
+  color: var(--error);
+  font-size: 0.9rem;
+}
+
+.success {
+  margin: 12px 0 0;
+  color: var(--success);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+/* ---------- Recipe card ---------- */
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  padding: 16px 0;
+  border-block: 1px solid var(--border);
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  text-align: center;
+}
+
+.stat-value {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--brown);
+  direction: ltr; /* numbers always read left-to-right */
+}
+
+.stat-value small {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-inline-start: 3px;
+  color: var(--brown-soft);
+}
+
+.stat-label {
+  font-size: 0.8rem;
+  color: var(--brown-soft);
+}
+
+.details {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin: 16px 0 0;
+}
+
+.detail dt {
+  font-size: 0.8rem;
+  color: var(--brown-soft);
+}
+
+.detail dd {
+  margin: 2px 0 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--brown-dark);
+}
+
+.change,
+.insight {
+  margin: 16px 0 0;
+  padding: 12px 14px;
+  background-color: var(--cream);
+  border-inline-start: 3px solid var(--brown);
+  border-radius: var(--radius);
+  font-size: 0.9rem;
+}
+
+/* Second heading inside the setup form ("Your beans"). */
+.panel-title-spaced {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+
+/* Full-width field that sits outside the two-column grid. */
+.field-wide {
+  margin-bottom: var(--gap);
+}
+
+.steps {
+  margin: 0;
+  padding-inline-start: 22px;
+}
+
+.steps li {
+  margin-bottom: 8px;
+}
+
+.notes {
+  margin: 0;
+  font-size: 0.92rem;
+  color: var(--brown-soft);
+}
+
+/* ---------- Bag scanner ---------- */
+
+/* Hidden from sight, still reachable by the <label> and by screen readers. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.scanner {
+  margin-bottom: var(--gap);
+}
+
+.scanner-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.scanner-hint {
+  margin: 0;
+}
+
+/* The <label> acts as the button, so it needs the disabled look itself. */
+.btn-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+label.btn {
+  display: inline-block;
+  cursor: pointer;
+}
+
+.scanner-preview {
+  display: block;
+  max-width: 160px;
+  max-height: 160px;
+  margin-top: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  object-fit: cover;
+}
+
+/* ---------- Brew timer ---------- */
+
+.timer-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.timer-clock {
+  font-size: 2.4rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--brown);
+  font-variant-numeric: tabular-nums;
+}
+
+.timer-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.timer-steps {
+  margin-top: 16px;
+}
+
+.timer-steps li {
+  padding: 6px 10px;
+  border-radius: var(--radius);
+  transition: background-color 0.2s ease;
+}
+
+/* The step whose timestamp has arrived. */
+.step-active {
+  background-color: var(--cream);
+  font-weight: 600;
+  color: var(--brown-dark);
+}
+
+/* ---------- Brew log ---------- */
+
+.log {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+}
+
+.log-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+  font-size: 0.9rem;
+}
+
+.log-main {
+  min-width: 0;
+}
+
+.log-tag {
+  flex-shrink: 0;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  color: var(--brown-soft);
+}
+
+.log-tag-perfect {
+  color: var(--success);
+  border-color: var(--success);
+}
+
+.log-tag-sour,
+.log-tag-bitter {
+  color: var(--error);
+  border-color: var(--error);
+}
+
+/* ---------- Feedback ---------- */
+
+.feedback-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.feedback-buttons .btn {
+  flex: 1;
+  min-width: 120px;
+}
+
+/* ---------- Footer ---------- */
+
+.footer {
+  margin-top: 32px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  text-align: center;
+}
+
+.footer p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--brown-soft);
+}
+
+.footer-link {
+  color: var(--brown);
+  font-weight: 600;
+  text-decoration: none;
+  border-bottom: 1px solid var(--border);
+  /* Latin name inside an RTL sentence: keep it left-to-right. */
+  direction: ltr;
+  display: inline-block;
+}
+
+.footer-link:hover,
+.footer-link:focus-visible {
+  color: var(--brown-dark);
+  border-bottom-color: var(--brown);
+}
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 560px) {
+  .grid,
+  .details {
+    grid-template-columns: 1fr;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .stat-value {
+    font-size: 1.6rem;
+  }
+
+  .feedback-buttons .btn {
+    flex-basis: 100%;
+  }
+}
