@@ -23,7 +23,10 @@ a number. See [How the AI agent works](#how-the-ai-agent-works).
 
 ## Setup
 
-**Requirements:** PHP 8.3+, Composer, Node 18+.
+**Requirements:** PHP 8.4+, Composer, Node 20+.
+
+> PHP 8.4.1 is a hard floor: Laravel 13 depends on Symfony v8, which requires it.
+> Vite 8 requires Node 20.19+.
 
 ### 1. Get a Gemini API key
 

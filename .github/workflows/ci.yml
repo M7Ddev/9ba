@@ -25,7 +25,9 @@ jobs:
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.3'
+          # Laravel 13 pulls Symfony v8, which requires >= 8.4.1. Keep this in
+          # step with the `php` constraint in backend/composer.json.
+          php-version: '8.4'
           extensions: mbstring, sqlite3, pdo_sqlite
           coverage: none
 
