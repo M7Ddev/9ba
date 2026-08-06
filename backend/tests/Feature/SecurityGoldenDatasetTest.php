@@ -448,6 +448,34 @@ class SecurityGoldenDatasetTest extends TestCase
         Http::assertNothingSent();
     }
 
+    /** CFG-005: hardening headers on every response, including errors. */
+    public function test_security_headers_are_present_on_api_responses(): void
+    {
+        $expected = [
+            'X-Content-Type-Options' => 'nosniff',
+            'X-Frame-Options' => 'DENY',
+            'Referrer-Policy' => 'no-referrer',
+            'X-Robots-Tag' => 'noindex, nofollow',
+        ];
+
+        $ok = $this->getJson('/api/health');
+        foreach ($expected as $header => $value) {
+            $ok->assertHeader($header, $value);
+        }
+        $this->assertStringContainsString("default-src 'none'", $ok->headers->get('Content-Security-Policy'));
+
+        // Error responses matter more, not less: they are what an attacker probes.
+        Http::fake();
+        $error = $this->postJson('/api/recipes/generate', ['method' => 'Nope']);
+        $error->assertStatus(422)->assertHeader('X-Content-Type-Options', 'nosniff');
+    }
+
+    /** CFG-006: HSTS only over HTTPS, never on a plaintext connection. */
+    public function test_hsts_is_not_sent_over_plain_http(): void
+    {
+        $this->getJson('/api/health')->assertHeaderMissing('Strict-Transport-Security');
+    }
+
     // ---------------------------------------------------------------------
     // Dataset integrity
     // ---------------------------------------------------------------------

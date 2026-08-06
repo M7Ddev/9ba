@@ -2,7 +2,9 @@
 # These are repo-wide safety nets so a secret can never be committed by accident.
 .env
 .env.*
-!.env.example
+# Templates are safe to commit — they carry placeholders, never values.
+# The pattern must cover .env.production.example too, not just .env.example.
+!*.example
 *.key
 *.pem
 

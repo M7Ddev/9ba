@@ -23,10 +23,11 @@
   "last_run": {
     "date": "2026-08-06",
     "automated_suite": "php artisan test --filter=SecurityGoldenDatasetTest",
-    "result": "24 tests, 92 assertions, all passed",
-    "full_suite": "91 tests, 273 assertions, all passed",
-    "open_findings": ["DEP-001"],
-    "note": "Statuses below reflect executed checks only. /security-review was NOT run — it requires a git repository and this project is not yet initialised."
+    "result": "26 tests, all passed",
+    "full_suite": "93 tests, 286 assertions, all passed",
+    "open_findings": [],
+    "continuous": ".github/workflows/ci.yml runs the suite, Pint, both dependency audits, a bundle key scan and a tracked-secret scan on every push to main.",
+    "note": "Statuses reflect executed checks only. DEP-001 was resolved by upgrading vite to 8.2.0. Remaining non-pass items are accepted prototype risks (no authentication, client_id as a grouping key, APP_DEBUG locally), all documented and all blocking for deployment."
   },
 
   "attack_surfaces": [
@@ -604,6 +605,51 @@
     },
 
     {
+      "id": "CFG-005",
+      "title": "Hardening headers on every API response",
+      "category": "security_misconfiguration",
+      "owasp_web": ["A05"],
+      "surface": "all endpoints",
+      "payload": "Inspect response headers on a success and on a 422.",
+      "attack_goal": "Content-type sniffing, clickjacking, referrer leakage of API paths, and search-engine indexing of the API.",
+      "expected_behavior": "SecurityHeaders middleware appends X-Content-Type-Options, X-Frame-Options, Referrer-Policy, Content-Security-Policy (default-src 'none'), Permissions-Policy and X-Robots-Tag to every response, error responses included. X-Powered-By is removed so PHP does not advertise its version.",
+      "assertion": "All headers present on both a 200 and a 422.",
+      "severity": "medium",
+      "automated": true,
+      "test_ref": "test_security_headers_are_present_on_api_responses",
+      "status": "pass"
+    },
+    {
+      "id": "CFG-006",
+      "title": "HSTS must not be sent over plaintext",
+      "category": "security_misconfiguration",
+      "owasp_web": ["A05", "A02"],
+      "surface": "all endpoints",
+      "payload": "Request over plain HTTP.",
+      "expected_behavior": "Strict-Transport-Security is emitted only when the request is secure. Sending it over HTTP is meaningless and can pin a broken configuration during local development.",
+      "assertion": "Header absent over HTTP; present over HTTPS.",
+      "severity": "low",
+      "automated": true,
+      "test_ref": "test_hsts_is_not_sent_over_plain_http",
+      "status": "pass"
+    },
+    {
+      "id": "CFG-007",
+      "title": "Production configuration template",
+      "category": "security_misconfiguration",
+      "owasp_web": ["A05"],
+      "surface": "backend/.env.production.example",
+      "payload": "Deploy with local defaults.",
+      "attack_goal": "APP_DEBUG=true in production renders environment variables — including GEMINI_API_KEY — on any unhandled exception.",
+      "expected_behavior": "Every value that must change is listed and marked CHANGE, with the reason. CI asserts the template carries no values.",
+      "assertion": "Template exists; APP_KEY / GEMINI_API_KEY / DB_PASSWORD are empty.",
+      "severity": "high",
+      "automated": false,
+      "manual_check": "Created 2026-08-06 and enforced by the 'Env templates carry no values' CI step.",
+      "status": "mitigated",
+      "notes": "Mitigated, not passed: the template documents the change. Whether the deployed server actually uses it cannot be verified from here."
+    },
+    {
       "id": "UPL-001",
       "title": "Non-image upload rejected",
       "category": "malicious_file_upload",
@@ -689,8 +735,9 @@
       "severity": "medium",
       "automated": false,
       "test_ref": "security/audit-deps.sh",
-      "status": "fail",
-      "manual_check": "Executed 2026-08-06. composer audit: clean, no advisories. npm audit: 2 vulnerabilities (1 high, 1 moderate), all in build tooling.",
+      "status": "pass",
+      "manual_check": "RESOLVED 2026-08-06. Upgraded vite 5.4.21 -> 8.2.0 and @vitejs/plugin-react 4 -> 6. Both audits now clean: composer 'No security vulnerability advisories found', npm 'found 0 vulnerabilities'. Verified after upgrade: production build succeeds, dev server serves on 127.0.0.1:5173, and the app renders with no console errors. Now enforced on every push by .github/workflows/ci.yml.",
+      "history": "Was FAIL earlier the same day with the four advisories below, all in build tooling and none shipped to production.",
       "finding": {
         "summary": "vite 5.4.21 (devDependency) and its transitive esbuild carry four advisories. None ship to production — runtime dependencies are only react and react-dom, and frontend/dist contains no vite or esbuild code.",
         "advisories": [
@@ -756,7 +803,7 @@
     "A02_cryptographic_failures": ["SD-001", "SD-002", "SD-004", "SD-006", "SD-007", "SD-008", "PI-005"],
     "A03_injection": ["INJ-001", "INJ-002", "INJ-003", "INJ-004", "PI-001", "UPL-001", "UPL-003"],
     "A04_insecure_design": ["PI-016", "CFG-003", "UPL-002", "AC-004"],
-    "A05_security_misconfiguration": ["CFG-001", "CFG-002", "CFG-003", "CFG-004", "SD-005", "SD-006"],
+    "A05_security_misconfiguration": ["CFG-001", "CFG-002", "CFG-003", "CFG-004", "CFG-005", "CFG-006", "CFG-007", "SD-005", "SD-006"],
     "A06_vulnerable_components": ["DEP-001"],
     "A07_identification_and_auth_failures": ["AUTH-001", "AC-002"],
     "A08_software_and_data_integrity": ["PI-014", "UPL-001", "AC-004"],

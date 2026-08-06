@@ -1,0 +1,118 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# No secrets are needed: Gemini is faked in every test, so the suite runs
+# offline. Nothing here should ever require a real API key.
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend — tests, style, audit
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, sqlite3, pdo_sqlite
+          coverage: none
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Prepare environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Check formatting
+        run: ./vendor/bin/pint --test app config routes tests
+
+      - name: Run test suite
+        run: php artisan test
+
+      - name: Audit PHP dependencies
+        run: composer audit
+
+  frontend:
+    name: Frontend — build, audit
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Audit JS dependencies
+        run: npm audit --audit-level=high
+
+      - name: Assert no API key in the built bundle
+        run: |
+          if grep -rqE 'AIza[0-9A-Za-z_-]{20,}' dist/; then
+            echo "::error::A Google API key pattern was found in the built bundle."
+            exit 1
+          fi
+          echo "No key material in dist/"
+
+  security:
+    name: Security — secret scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: No real .env committed
+        run: |
+          if git ls-files | grep -E '(^|/)\.env$|(^|/)\.env\.' | grep -v '\.example$'; then
+            echo "::error::A real .env file is tracked in git."
+            exit 1
+          fi
+          echo "Only .example templates are tracked."
+
+      - name: No secrets in tracked files
+        run: |
+          # AIzaSyFAKE... is the deliberate placeholder in the security test suite.
+          hits=$(git grep -nIE 'AIza[0-9A-Za-z_-]{20,}' -- . \
+                 | grep -v 'AIzaSyFAKE' || true)
+          if [ -n "$hits" ]; then
+            echo "::error::Possible API key in tracked files:"
+            echo "$hits"
+            exit 1
+          fi
+          echo "No key material in tracked files."
+
+      - name: Env templates carry no values
+        run: |
+          bad=$(grep -hE '^(APP_KEY|GEMINI_API_KEY|DB_PASSWORD)=.+' \
+                backend/.env.example backend/.env.production.example 2>/dev/null || true)
+          if [ -n "$bad" ]; then
+            echo "::error::An env template contains a value:"
+            echo "$bad"
+            exit 1
+          fi
+          echo "Templates are empty."
