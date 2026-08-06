@@ -20,27 +20,13 @@
       href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap"
       rel="stylesheet"
     />
+    <!--
+      Runs before first paint to avoid a flash of the wrong theme. External
+      rather than inline so the CSP can keep script-src 'self'.
+    -->
+    <script src="/app/theme-init.js"></script>
   </head>
   <body>
-    <!--
-      Apply the stored theme before the first paint, otherwise a dark-mode user
-      sees a flash of the cream background while React boots. Must stay in sync
-      with src/lib/theme.js — same storage key, same rule.
-    -->
-    <script>
-      (function () {
-        try {
-          var stored = localStorage.getItem('brewmaster.theme');
-          var dark = stored
-            ? stored === 'dark'
-            : window.matchMedia('(prefers-color-scheme: dark)').matches;
-          document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
-        } catch (e) {
-          /* Storage blocked: the CSS media query still handles it. */
-        }
-      })();
-    </script>
-
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

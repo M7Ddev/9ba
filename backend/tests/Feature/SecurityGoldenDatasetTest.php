@@ -470,6 +470,68 @@ class SecurityGoldenDatasetTest extends TestCase
         $error->assertStatus(422)->assertHeader('X-Content-Type-Options', 'nosniff');
     }
 
+    /**
+     * CFG-008: the app shell and the API need different policies.
+     *
+     * Regression guard. A single `default-src 'none'` for everything blocked the
+     * SPA's own script tag, stylesheet and web font, and the deployed page
+     * rendered as an empty <div id="root"> with no console error loud enough to
+     * notice.
+     */
+    public function test_the_app_shell_and_the_api_get_different_csp(): void
+    {
+        $api = $this->getJson('/api/health')->headers->get('Content-Security-Policy');
+
+        // JSON must not be permitted to load anything at all.
+        $this->assertStringContainsString("default-src 'none'", $api);
+
+        $shell = $this->get('/')->headers->get('Content-Security-Policy');
+
+        // The shell must be able to load its own bundle...
+        $this->assertStringContainsString("script-src 'self'", $shell);
+        $this->assertStringContainsString('fonts.googleapis.com', $shell);
+        $this->assertStringNotContainsString("default-src 'none'", $shell);
+
+        // ...but inline script stays forbidden. That is why the theme bootstrap
+        // is an external file rather than an inline <script>.
+        $this->assertStringNotContainsString("script-src 'self' 'unsafe-inline'", $shell);
+        $this->assertStringContainsString("frame-ancestors 'none'", $shell);
+    }
+
+    /** The SPA catch-all must never swallow an API route. */
+    public function test_the_spa_route_does_not_shadow_the_api(): void
+    {
+        $this->getJson('/api/health')
+            ->assertOk()
+            ->assertHeader('Content-Type', 'application/json')
+            ->assertJsonPath('ok', true);
+
+        // An unknown API path must 404 as JSON, not fall through to the SPA.
+        $this->getJson('/api/does-not-exist')->assertNotFound();
+    }
+
+    /** A backend deployed without building the frontend must say so. */
+    public function test_a_missing_frontend_build_is_reported_clearly(): void
+    {
+        $index = public_path('app/index.html');
+        $backup = $index.'.testbak';
+        $existed = is_file($index);
+
+        if ($existed) {
+            rename($index, $backup);
+        }
+
+        try {
+            $this->get('/')
+                ->assertStatus(503)
+                ->assertSee('npm run build', false);
+        } finally {
+            if ($existed) {
+                rename($backup, $index);
+            }
+        }
+    }
+
     /** CFG-006: HSTS only over HTTPS, never on a plaintext connection. */
     public function test_hsts_is_not_sent_over_plain_http(): void
     {

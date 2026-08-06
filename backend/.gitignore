@@ -29,3 +29,6 @@ Thumbs.db
 # Local database — the brew log is runtime data, not source.
 /database/*.sqlite
 /database/*.sqlite-journal
+
+# Built frontend — produced by `cd frontend && npm run build`, not source.
+/public/app

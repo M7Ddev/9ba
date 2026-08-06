@@ -75,11 +75,24 @@ jobs:
 
       - name: Assert no API key in the built bundle
         run: |
-          if grep -rqE 'AIza[0-9A-Za-z_-]{20,}' dist/; then
+          if grep -rqE 'AIza[0-9A-Za-z_-]{20,}' ../backend/public/app/; then
             echo "::error::A Google API key pattern was found in the built bundle."
             exit 1
           fi
-          echo "No key material in dist/"
+          echo "No key material in the build."
+
+      - name: Assert no development URL in the built bundle
+        run: |
+          # The production build is served same-origin by Laravel, so every API
+          # call must be relative. A localhost URL here means VITE_API_BASE_URL
+          # leaked in from `.env` (which Vite loads in every mode) and the
+          # deployed site would call the visitor's own machine.
+          if grep -rqE 'https?://localhost' ../backend/public/app/; then
+            echo "::error::A localhost URL was compiled into the production bundle."
+            grep -roE 'https?://localhost[:0-9]*' ../backend/public/app/ | head
+            exit 1
+          fi
+          echo "No development URL in the build."
 
   security:
     name: Security — secret scan

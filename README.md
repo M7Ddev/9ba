@@ -69,6 +69,10 @@ npm install
 npm run dev
 ```
 
+> In development the frontend runs on :5173 and calls the API on :8000, so CORS
+> applies. In production it is served *by* Laravel on one origin and CORS does not
+> apply at all — see Deployment below.
+
 The app runs on <http://localhost:5173>. It checks `/api/health` on load, so if the
 backend is down or has no key you get a clear banner instead of a mysterious failure.
 
@@ -383,6 +387,43 @@ php artisan db:seed --class=DemoBrewSeeder
 ```
 
 That seeds a client (`learner-1`) with a sour tendency.
+
+## Deployment
+
+The app deploys as **one thing on one origin**: Laravel serves the built React
+frontend from its own `public/` directory. No CORS, no second host, and no API URL
+to misconfigure.
+
+```bash
+cd frontend && npm ci && npm run build   # -> backend/public/app/
+cd ../backend && composer install --no-dev --optimize-autoloader
+php artisan migrate --force
+php artisan config:cache && php artisan route:cache
+```
+
+Then point your web server at `backend/public`. Everything that is not `/api/*`,
+`/app/*` or `/up` returns the SPA, which owns its own routing.
+
+**Vercel and Netlify cannot host this** — they do not run PHP. They would only serve
+the frontend, leaving the API to live elsewhere. Use a PHP host: Railway, Render,
+Laravel Cloud, or Fly.io.
+
+Requirements to check before choosing a host:
+
+- **PHP ≥ 8.4.1** — a lot of budget hosting is still on 8.2/8.3, where `composer
+  install` fails outright.
+- **Persistent storage** if you keep SQLite. It is a single file; on ephemeral
+  hosting the brew log is wiped on every redeploy. Use Postgres if history matters.
+
+Copy `backend/.env.production.example` to `.env` on the server and fill it in. Every
+value that must change is marked `CHANGE`, with the reason.
+
+> ### Before going live
+>
+> **There is no authentication.** Every endpoint is public and rate limiting is
+> per-IP only, so anyone who finds the URL can spend your Gemini quota. At minimum
+> set a spending cap on the key in Google AI Studio; better, put the app behind a
+> login or an access proxy.
 
 ## Notes / limitations
 
