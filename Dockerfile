@@ -48,6 +48,21 @@ WORKDIR /app
 # intl and zip are expected by parts of the framework.
 RUN install-php-extensions pdo_sqlite pdo_pgsql intl zip opcache
 
+# Strip the Linux file capability from the FrankenPHP binary.
+#
+# The image ships it with cap_net_bind_service so it can bind port 80 as a
+# non-root user. Hardened runtimes — Render, and anything running with
+# no-new-privileges or dropped capabilities — refuse to exec a file carrying
+# capabilities, and the container dies with:
+#     exec: frankenphp: Operation not permitted   (exit 126)
+#
+# We listen on a high port assigned by $PORT, so the capability buys nothing.
+# `cp` does not preserve file capabilities, which removes them without needing
+# libcap installed in the image.
+RUN cp /usr/local/bin/frankenphp /tmp/frankenphp \
+    && mv -f /tmp/frankenphp /usr/local/bin/frankenphp \
+    && chmod +x /usr/local/bin/frankenphp
+
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 # Dependencies first, again for layer caching. --no-scripts because artisan
