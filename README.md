@@ -408,6 +408,51 @@ Then point your web server at `backend/public`. Everything that is not `/api/*`,
 the frontend, leaving the API to live elsewhere. Use a PHP host: Railway, Render,
 Laravel Cloud, or Fly.io.
 
+### Deploying with Docker (recommended)
+
+The repository ships a `Dockerfile` that builds the frontend and the backend into a
+single image. It is portable — Railway, Render and Fly.io all build a Dockerfile — and
+CI builds and boots it on every push, so it is verified rather than aspirational.
+
+```bash
+docker build -t sabba .
+docker run -p 8080:8080 \
+  -e APP_KEY="base64:$(openssl rand -base64 32)" \
+  -e APP_ENV=production -e APP_DEBUG=false \
+  -e GEMINI_API_KEY=your_key \
+  -e APP_ACCESS_CODE=your_code \
+  sabba
+```
+
+The container serves on **:8080**. Its entrypoint creates the SQLite file if missing,
+runs migrations, caches config and routes, and refuses to start without an `APP_KEY`.
+
+It runs **FrankenPHP**, a real application server — not `php artisan serve`, which is
+single-threaded and not meant for production.
+
+#### On Railway
+
+1. **New Project → Deploy from GitHub repo**, pick `9ba`. Railway detects the
+   Dockerfile automatically.
+2. Add the environment variables under **Variables**:
+
+   | Variable | Value |
+   |---|---|
+   | `APP_KEY` | `php artisan key:generate --show` |
+   | `APP_ENV` | `production` |
+   | `APP_DEBUG` | `false` |
+   | `GEMINI_API_KEY` | your key |
+   | `APP_ACCESS_CODE` | `php -r "echo bin2hex(random_bytes(16));"` |
+   | `LOG_LEVEL` | `warning` |
+
+3. Add a **Volume** mounted at `/app/database` if you want the brew log to survive
+   redeploys. Without one, SQLite is wiped every deploy — the app still works, but
+   history and personalisation reset.
+4. Deploy, then open the generated URL.
+
+`FRONTEND_URL` is not needed: the frontend is served by Laravel on the same origin, so
+CORS never applies in production.
+
 Requirements to check before choosing a host:
 
 - **PHP ≥ 8.4.1** — a lot of budget hosting is still on 8.2/8.3, where `composer

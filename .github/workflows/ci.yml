@@ -94,6 +94,64 @@ jobs:
           fi
           echo "No development URL in the build."
 
+  docker:
+    name: Docker — build and boot
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build the production image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: sabba:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Building proves it compiles; running proves it actually serves. The
+      # entrypoint migrates, caches config and starts FrankenPHP, so a failure
+      # in any of that shows up here rather than on the host.
+      - name: Boot the container and check it serves
+        run: |
+          docker run -d --name sabba -p 8080:8080 \
+            -e APP_KEY="base64:$(openssl rand -base64 32)" \
+            -e APP_ENV=production \
+            -e APP_DEBUG=false \
+            sabba:ci
+
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:8080/api/health > /tmp/health.json 2>/dev/null; then
+              echo "Health: $(cat /tmp/health.json)"
+              break
+            fi
+            if [ "$i" = "30" ]; then
+              echo "::error::Container did not become healthy in time."
+              docker logs sabba
+              exit 1
+            fi
+            sleep 2
+          done
+
+          # The SPA must be served by Laravel on the same origin.
+          code=$(curl -s -o /tmp/index.html -w '%{http_code}' http://localhost:8080/)
+          if [ "$code" != "200" ]; then
+            echo "::error::The app shell returned HTTP $code"
+            docker logs sabba
+            exit 1
+          fi
+          grep -q 'id="root"' /tmp/index.html \
+            || { echo "::error::The served page is not the built SPA."; exit 1; }
+
+          echo "Image builds, boots, migrates and serves both the API and the SPA."
+
+      - name: Container logs
+        if: always()
+        run: docker logs sabba || true
+
   security:
     name: Security — secret scan
     runs-on: ubuntu-latest
