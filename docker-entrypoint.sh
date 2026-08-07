@@ -35,5 +35,17 @@ if [ -z "${APP_KEY:-}" ]; then
   exit 1
 fi
 
-echo "Starting server on ${SERVER_NAME:-:8080}"
-exec "$@"
+# Railway, Render, Fly and Cloud Run all assign a port at runtime through $PORT
+# and route only to that port. A hardcoded listen address works locally and then
+# fails on the host with no obvious cause, so honour $PORT and fall back to 8080.
+PORT="${PORT:-8080}"
+export SERVER_NAME=":${PORT}"
+
+# An explicit command (docker run ... <cmd>) wins, so the image stays debuggable.
+if [ "$#" -gt 0 ]; then
+  echo "Starting: $*"
+  exec "$@"
+fi
+
+echo "Starting server on :${PORT}"
+exec frankenphp php-server --listen ":${PORT}" --root /app/public

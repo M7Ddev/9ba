@@ -117,7 +117,11 @@ jobs:
       # in any of that shows up here rather than on the host.
       - name: Boot the container and check it serves
         run: |
-          docker run -d --name sabba -p 8080:8080 \
+          # PORT is set deliberately: Railway, Render, Fly and Cloud Run all
+          # assign one at runtime and route only there. Testing with the default
+          # would not exercise the path the host actually uses.
+          docker run -d --name sabba -p 8080:9123 \
+            -e PORT=9123 \
             -e APP_KEY="base64:$(openssl rand -base64 32)" \
             -e APP_ENV=production \
             -e APP_DEBUG=false \

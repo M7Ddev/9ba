@@ -66,9 +66,8 @@ RUN composer dump-autoload --optimize --classmap-authoritative \
     && mkdir -p storage/framework/{cache,sessions,views} storage/logs database \
     && chown -R www-data:www-data storage bootstrap/cache database
 
-# Caddy needs to know it is behind the host's TLS terminator; :8080 serves plain
-# HTTP and lets the platform handle certificates.
-ENV SERVER_NAME=:8080
+# The port is decided at runtime by the entrypoint, which honours $PORT so the
+# image works on hosts that assign one. 8080 is only the fallback.
 EXPOSE 8080
 
 # Migrations run at boot rather than at build time: the database does not exist
@@ -77,4 +76,3 @@ COPY docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 ENTRYPOINT ["docker-entrypoint.sh"]
-CMD ["frankenphp", "php-server", "--listen", ":8080", "--root", "/app/public"]
