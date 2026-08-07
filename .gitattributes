@@ -1,0 +1,20 @@
+# Normalise line endings.
+#
+# Development happens on Windows, deployment runs in a Linux container. A shell
+# script or Dockerfile that reaches the image with CRLF endings fails in a way
+# that reads as nonsense — `#!/bin/sh\r` becomes "no such file or directory",
+# naming a file that plainly exists. Pin them to LF so the checkout the container
+# builds from is always correct, whatever the developer's platform.
+
+* text=auto
+
+*.sh        text eol=lf
+Dockerfile  text eol=lf
+*.yml       text eol=lf
+*.yaml      text eol=lf
+
+# Binary — never touch.
+*.png binary
+*.jpg binary
+*.webp binary
+*.ico binary
