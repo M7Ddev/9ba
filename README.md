@@ -420,10 +420,15 @@ value that must change is marked `CHANGE`, with the reason.
 
 > ### Before going live
 >
-> **There is no authentication.** Every endpoint is public and rate limiting is
-> per-IP only, so anyone who finds the URL can spend your Gemini quota. At minimum
-> set a spending cap on the key in Google AI Studio; better, put the app behind a
-> login or an access proxy.
+> **Set `APP_ACCESS_CODE`.** Without it every endpoint is public, and per-IP rate
+> limiting does not stop a script — anyone who finds the URL can exhaust your Gemini
+> quota. The code is a shared secret, not a user system; for anything beyond a demo,
+> put the app behind real access control or add a login.
+>
+> **If your key has billing enabled**, also set a requests-per-day quota in the Cloud
+> Console (Generative Language API → Quotas). Note that a Cloud Billing *budget* only
+> sends alerts while spending continues — the quota is what actually stops usage. On a
+> free-tier key there is nothing to cap: abuse costs rate limit, not money.
 
 ## Notes / limitations
 
