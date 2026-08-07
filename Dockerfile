@@ -41,9 +41,12 @@ FROM dunglas/frankenphp:1-php8.4
 
 WORKDIR /app
 
-# pdo_sqlite for the brew log; intl and zip are expected by parts of the
-# framework. install-php-extensions ships with this image.
-RUN install-php-extensions pdo_sqlite intl zip opcache
+# pdo_sqlite for local/simple deployments, pdo_pgsql for hosts without a
+# persistent disk — there the database must live elsewhere (Neon, Supabase),
+# or the brew log resets every time the container restarts and the
+# personalisation feature quietly stops working.
+# intl and zip are expected by parts of the framework.
+RUN install-php-extensions pdo_sqlite pdo_pgsql intl zip opcache
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
