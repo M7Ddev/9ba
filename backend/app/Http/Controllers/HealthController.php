@@ -23,6 +23,11 @@ class HealthController extends Controller
             'ok' => true,
             'key_configured' => filled(config('gemini.api_key')),
             'model' => config('gemini.model'),
+
+            // Whether the frontend must ask for an access code before it can
+            // call anything. Reports only that a code is required, never the
+            // code or its length.
+            'access_required' => filled(config('security.access_code')),
         ]);
     }
 }

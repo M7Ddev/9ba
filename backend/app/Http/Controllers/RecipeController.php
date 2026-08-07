@@ -62,20 +62,26 @@ class RecipeController extends Controller
      * Records how the cup actually tasted. This is what `get_brew_history` later
      * aggregates, so the agent can pre-correct for the user's tendencies.
      */
-    public function feedback(Request $request, Brew $brew): JsonResponse
+    public function feedback(Request $request, int $brew): JsonResponse
     {
         $validated = $request->validate([
             'feedback' => ['required', 'string', Rule::in(['sour', 'bitter', 'perfect'])],
             'client_id' => ['required', 'string', 'alpha_dash', 'max:64'],
         ]);
 
-        // The client id is not a credential, but a brew should still only be
-        // rated by the browser that created it.
-        if (! hash_equals($brew->client_id, $validated['client_id'])) {
+        // Looked up by hand rather than through route-model binding. Binding is
+        // resolved before route middleware, so a bound model would 404 on a
+        // missing id *before* the access-code gate ran — telling an
+        // unauthenticated caller which brew ids exist.
+        $record = Brew::find($brew);
+
+        // One response for "no such brew" and "not yours", so the API never
+        // confirms the existence of another client's brew either.
+        if ($record === null || ! hash_equals($record->client_id, $validated['client_id'])) {
             return response()->json(['error' => 'VALIDATION', 'message' => 'Unknown brew.'], 404);
         }
 
-        $brew->update(['feedback' => $validated['feedback']]);
+        $record->update(['feedback' => $validated['feedback']]);
 
         return response()->json(['ok' => true]);
     }

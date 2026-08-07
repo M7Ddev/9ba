@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\RequireAccessCode;
 use App\Http\Middleware\SecurityHeaders;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -22,6 +23,10 @@ return Application::configure(basePath: dirname(__DIR__))
         // Applied to every response, including error responses rendered by the
         // exception handler.
         $middleware->append(SecurityHeaders::class);
+
+        $middleware->alias([
+            'access.code' => RequireAccessCode::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

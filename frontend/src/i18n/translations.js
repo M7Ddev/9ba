@@ -45,6 +45,14 @@ export const translations = {
     switchToDark: 'الوضع الداكن',
     switchToLight: 'الوضع الفاتح',
 
+    // Access gate
+    gateTitle: 'رمز الدخول',
+    gateHint: 'هذا الموقع محمي برمز دخول. أدخله مرة واحدة وسيُحفظ في متصفحك.',
+    gateLabel: 'الرمز',
+    gateSubmit: 'دخول',
+    gateChecking: 'جارٍ التحقق…',
+    gateRejected: 'الرمز غير صحيح.',
+
     // Shown when the backend is down or has no key (a setup problem)
     envHint: 'الخادم غير جاهز. شغّل خادم Laravel وتأكد من ضبط GEMINI_API_KEY.',
 
@@ -150,6 +158,7 @@ export const translations = {
     // Errors
     errors: {
       API_UNREACHABLE: 'تعذّر الوصول إلى الخادم. شغّل Laravel بالأمر: php artisan serve',
+      UNAUTHORIZED: 'انتهت صلاحية رمز الدخول أو أنه غير صحيح. أعد إدخاله.',
       MISSING_KEY: 'لم يتم ضبط GEMINI_API_KEY في ملف backend/.env. أضف المفتاح ثم أعد تشغيل الخادم.',
       INVALID_KEY: 'المفتاح غير صالح أو لا يملك صلاحية. تأكد من نسخه كاملًا في backend/.env.',
       RATE_LIMIT: 'تجاوزت الحد المسموح من الطلبات. انتظر قليلًا ثم أعد المحاولة.',
@@ -175,6 +184,13 @@ export const translations = {
 
     switchToDark: 'Dark mode',
     switchToLight: 'Light mode',
+
+    gateTitle: 'Access code',
+    gateHint: 'This site is protected by an access code. Enter it once and it will be remembered in this browser.',
+    gateLabel: 'Code',
+    gateSubmit: 'Enter',
+    gateChecking: 'Checking…',
+    gateRejected: 'That code is not correct.',
 
     envHint: 'The backend is not ready. Start the Laravel server and set GEMINI_API_KEY.',
 
@@ -275,6 +291,7 @@ export const translations = {
 
     errors: {
       API_UNREACHABLE: 'Cannot reach the backend. Start Laravel with: php artisan serve',
+      UNAUTHORIZED: 'The access code is missing or no longer valid. Please enter it again.',
       MISSING_KEY: 'GEMINI_API_KEY is not set in backend/.env. Add the key and restart the server.',
       INVALID_KEY: 'The key is invalid or lacks permission. Check backend/.env has the full key.',
       RATE_LIMIT: 'Rate limit reached. Wait a moment and try again.',

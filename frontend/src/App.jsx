@@ -6,7 +6,9 @@ import FeedbackBar from './components/FeedbackBar.jsx';
 import BrewTimer from './components/BrewTimer.jsx';
 import BrewLog from './components/BrewLog.jsx';
 import Footer from './components/Footer.jsx';
+import AccessGate from './components/AccessGate.jsx';
 import { initialTheme, applyTheme } from './lib/theme.js';
+import { getAccessCode, clearAccessCode } from './lib/accessCode.js';
 
 import { translations, LANGUAGES } from './i18n/translations.js';
 import {
@@ -63,6 +65,9 @@ export default function App() {
   const [brewId, setBrewId] = useState(null);
   const [brews, setBrews] = useState([]);
 
+  // Set when the backend requires an access code and we do not have a valid one.
+  const [locked, setLocked] = useState(false);
+
   const t = translations[lang];
   const dir = LANGUAGES[lang].dir;
 
@@ -80,9 +85,32 @@ export default function App() {
   // Ask the backend on mount whether it is reachable and has a key configured,
   // so setup problems surface immediately instead of on the first button press.
   useEffect(() => {
-    checkHealth().then((result) => setHealth(result ?? { ok: false, key_configured: false }));
+    checkHealth().then((result) => {
+      setHealth(result ?? { ok: false, key_configured: false });
+
+      // Lock the UI when the server wants a code and this browser has none.
+      // A stored-but-wrong code is caught later, by a 401 from a real request.
+      if (result?.access_required && getAccessCode() === '') {
+        setLocked(true);
+      }
+    });
+
     fetchBrews().then(setBrews);
   }, []);
+
+  /**
+   * Handle a rejected access code from any request: drop the stored value and
+   * show the gate again rather than leaving the user with a dead button.
+   */
+  function handleErrorCode(code) {
+    if (code === 'UNAUTHORIZED') {
+      clearAccessCode();
+      setLocked(true);
+      return;
+    }
+
+    setErrorCode(code);
+  }
 
   /** Refresh the brew log after anything that changes it. */
   function refreshLog() {
@@ -139,7 +167,7 @@ export default function App() {
       refreshLog();
     } catch (error) {
       // api.js throws the backend's short code ('INVALID_KEY', 'RATE_LIMIT', …).
-      setErrorCode(error.message);
+      handleErrorCode(error.message);
     } finally {
       setLoading(false);
     }
@@ -173,7 +201,7 @@ export default function App() {
       setBrewId(id);
       refreshLog();
     } catch (error) {
-      setErrorCode(error.message);
+      handleErrorCode(error.message);
     } finally {
       setAdjusting(false);
     }
@@ -193,7 +221,7 @@ export default function App() {
       setRecipe(result);
       setRecipeLang(lang);
     } catch (error) {
-      setErrorCode(error.message);
+      handleErrorCode(error.message);
     } finally {
       setTranslating(false);
     }
@@ -236,8 +264,22 @@ export default function App() {
       </header>
 
       <main className="main">
-        {/* Setup problem (backend down or key missing), not a user mistake. */}
-        {setupCode && <p className="error">{t.errors[setupCode]}</p>}
+        {/* Locked: nothing else is usable, so show only the gate. */}
+        {locked && (
+          <AccessGate
+            t={t}
+            onUnlocked={() => {
+              setLocked(false);
+              setErrorCode(null);
+              refreshLog();
+            }}
+          />
+        )}
+
+        {!locked && (
+          <>
+            {/* Setup problem (backend down or key missing), not a user mistake. */}
+            {setupCode && <p className="error">{t.errors[setupCode]}</p>}
 
         <RecipeForm
           t={t}
@@ -286,7 +328,9 @@ export default function App() {
           </>
         )}
 
-        <BrewLog t={t} brews={brews} />
+            <BrewLog t={t} brews={brews} />
+          </>
+        )}
       </main>
 
       <Footer t={t} />

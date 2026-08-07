@@ -408,6 +408,7 @@ class SecurityGoldenDatasetTest extends TestCase
             ->unique()->sort()->values()->all();
 
         $expected = [
+            'api/access/check',
             'api/beans/scan',
             'api/brews',
             'api/brews/{brew}/feedback',

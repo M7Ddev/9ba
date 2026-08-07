@@ -567,6 +567,25 @@ label.btn {
   min-width: 120px;
 }
 
+/* ---------- Access gate ---------- */
+
+.gate {
+  max-width: 420px;
+  margin: 32px auto;
+}
+
+.gate-hint {
+  margin: 0 0 16px;
+}
+
+.gate-submit {
+  margin-top: var(--gap);
+}
+
+.gate-error {
+  margin-top: 12px;
+}
+
 /* ---------- Footer ---------- */
 
 .footer {

@@ -20,6 +20,25 @@
 
 import { API_BASE_URL } from './config.js';
 import { getClientId } from './clientId.js';
+import { getAccessCode } from './accessCode.js';
+
+/**
+ * Headers every API call carries.
+ *
+ * The access code is sent as a header rather than a query parameter so it never
+ * lands in a server access log, a proxy log, or a Referer header.
+ *
+ * @param {object} extra
+ */
+function headers(extra = {}) {
+  const code = getAccessCode();
+
+  return {
+    Accept: 'application/json',
+    ...(code ? { 'X-Access-Code': code } : {}),
+    ...extra,
+  };
+}
 
 /**
  * POST helper with consistent error handling.
@@ -34,7 +53,7 @@ async function postJson(path, body) {
   try {
     response = await fetch(`${API_BASE_URL}${path}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      headers: headers({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(body),
     });
   } catch (error) {
@@ -77,7 +96,7 @@ export async function scanBag(file) {
     // No Content-Type header: the browser sets the multipart boundary itself.
     response = await fetch(`${API_BASE_URL}/api/beans/scan`, {
       method: 'POST',
-      headers: { Accept: 'application/json' },
+      headers: headers(),
       body: form,
     });
   } catch (error) {
@@ -116,7 +135,7 @@ export async function recordFeedback(brewId, feedback) {
   try {
     await fetch(`${API_BASE_URL}/api/brews/${brewId}/feedback`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      headers: headers({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ feedback, client_id: getClientId() }),
     });
   } catch (error) {
@@ -133,7 +152,7 @@ export async function fetchBrews() {
   try {
     const response = await fetch(
       `${API_BASE_URL}/api/brews?client_id=${encodeURIComponent(getClientId())}`,
-      { headers: { Accept: 'application/json' } },
+      { headers: headers() },
     );
     if (!response.ok) return [];
 
@@ -154,12 +173,30 @@ export async function fetchBrews() {
 export async function checkHealth() {
   try {
     const response = await fetch(`${API_BASE_URL}/api/health`, {
-      headers: { Accept: 'application/json' },
+      headers: headers(),
     });
     if (!response.ok) return null;
     return await response.json();
   } catch {
     return null; // Backend not running — the UI reports API_UNREACHABLE.
+  }
+}
+
+/**
+ * Check whether an access code is accepted, without spending a Gemini request.
+ *
+ * @param {string} code
+ * @returns {Promise<boolean>}
+ */
+export async function verifyAccessCode(code) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/access/check`, {
+      headers: { Accept: 'application/json', 'X-Access-Code': code },
+    });
+
+    return response.ok;
+  } catch {
+    return false;
   }
 }
 
