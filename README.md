@@ -477,6 +477,14 @@ value that must change is marked `CHANGE`, with the reason.
 
 ## Notes / limitations
 
-- No auth and no database — this is a capstone prototype. Rate limiting is by IP.
-- The frontend calls Gemini through Laravel, so deploying means running both. A single-origin
-  deploy (serving the built frontend from Laravel's `public/`) would remove the CORS config.
+- **Access control is a shared code, not a user system.** `APP_ACCESS_CODE` gates every
+  endpoint that costs a Gemini request, but it identifies nobody and everyone who has it
+  has the same access. Fine for a demo or a private deployment; add a real login before
+  anything multi-user.
+- **`client_id` is a grouping key, not a credential.** It separates one browser's brew log
+  from another's. Anyone who learns one can read that log and skew its personalisation —
+  bounded, since history only shifts grind and temperature within SCA-clamped ranges.
+- Rate limiting is per IP (30/min, 10/min for image scans), so it slows a browser but not a
+  distributed client. The access code is the real control.
+- SQLite is a single file. On hosting without a persistent volume the brew log resets on
+  every deploy; the app still works, but history and personalisation start over.

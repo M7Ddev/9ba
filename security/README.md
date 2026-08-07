@@ -49,8 +49,10 @@ anyway.
 
 ## Standing caveats
 
-- **No authentication exists** (`AUTH-001`). Every endpoint is public. Accepted for a local
-  prototype; blocking for deployment.
+- **Access control is a shared code, not authentication** (`AUTH-001`). `APP_ACCESS_CODE`
+  gates every endpoint that costs a Gemini request; leaving it empty leaves the API open,
+  which is the local-development default. The code identifies nobody, so it protects the
+  owner's quota rather than any user's data.
 - **`client_id` is a grouping key, not a credential** (`AC-002`, `AC-003`). Knowing one grants
   read access to that brew log and the ability to poison its history.
 - **`APP_DEBUG=true`** (`CFG-001`). Correct locally, must be false before any deploy.

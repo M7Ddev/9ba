@@ -21,13 +21,13 @@
   },
 
   "last_run": {
-    "date": "2026-08-06",
+    "date": "2026-08-07",
     "automated_suite": "php artisan test --filter=SecurityGoldenDatasetTest",
-    "result": "26 tests, all passed",
-    "full_suite": "93 tests, 286 assertions, all passed",
+    "full_suite": "104 tests, 324 assertions, all passed",
+    "manual_checks": "bash security/run-checks.sh — all passed",
     "open_findings": [],
-    "continuous": ".github/workflows/ci.yml runs the suite, Pint, both dependency audits, a bundle key scan and a tracked-secret scan on every push to main.",
-    "note": "Statuses reflect executed checks only. DEP-001 was resolved by upgrading vite to 8.2.0. Remaining non-pass items are accepted prototype risks (no authentication, client_id as a grouping key, APP_DEBUG locally), all documented and all blocking for deployment."
+    "continuous": "CI runs the suite, Pint, both dependency audits, a bundle scan for key material and development URLs, a tracked-secret scan, and a Docker build that boots the image and asserts it serves both the API and the SPA.",
+    "note": "Statuses reflect executed checks only. Resolved since the first run: DEP-001 (vite 8.2.0), AUTH-001 (access-code gate), AC-005 (route-model binding leaked which brew ids exist). Remaining non-pass items are accepted design trade-offs of a shared-code prototype — client_id as a grouping key, and APP_DEBUG true in local development only."
   },
 
   "attack_surfaces": [
@@ -753,17 +753,63 @@
 
     {
       "id": "AUTH-001",
-      "title": "No authentication exists",
+      "title": "Unauthenticated access to endpoints that cost money",
       "category": "authentication_failure",
       "owasp_web": ["A07"],
       "surface": "all endpoints",
-      "payload": "Call any endpoint with no credentials.",
-      "expected_behavior": "By design there is no auth — every endpoint is public. Deliberate for a local prototype and documented in the README.",
-      "assertion": "n/a",
+      "payload": "Call any paid endpoint with no credentials.",
+      "attack_goal": "Exhaust the owner's Gemini quota.",
+      "expected_behavior": "RequireAccessCode gates every endpoint that spends a Gemini request. /api/health stays open so the frontend can discover that a code is required, and reports only a boolean. An empty APP_ACCESS_CODE disables the gate — the local-development default.",
+      "assertion": "401 without a code; no outbound Gemini request is made.",
       "severity": "high",
+      "automated": true,
+      "test_ref": "test_every_paid_endpoint_is_gated",
+      "status": "pass",
+      "notes": "A shared code is not authentication: it identifies nobody and everyone holding it has equal access. It protects the owner's quota, not any user's data. Add a real login before this is multi-user, and note the gate is only as strong as the code's length."
+    },
+    {
+      "id": "AUTH-002",
+      "title": "Access code must resist timing analysis",
+      "category": "authentication_failure",
+      "owasp_web": ["A07", "A02"],
+      "surface": "all gated endpoints",
+      "payload": "Submit candidate codes and measure response time.",
+      "attack_goal": "Recover the code one character at a time from comparison timing.",
+      "expected_behavior": "Compared with hash_equals, which takes the same time regardless of where the first difference falls.",
+      "assertion": "Rejection is constant-time; verified by inspection, not by timing measurement.",
+      "severity": "medium",
       "automated": false,
-      "status": "accepted_risk",
-      "notes": "Blocking for any deployment. Anyone reaching the API can spend the owner's Gemini quota. Mitigations today are IP rate limits and CORS only — neither stops a non-browser client."
+      "status": "mitigated"
+    },
+    {
+      "id": "AUTH-003",
+      "title": "A rejection must not describe the expected code",
+      "category": "authentication_failure",
+      "owasp_web": ["A07"],
+      "surface": "all gated endpoints",
+      "payload": "Inspect the 401 body and /api/health.",
+      "expected_behavior": "The 401 carries a generic message. /api/health reports access_required as a boolean and never the code or its length.",
+      "assertion": "Neither response contains the code or its length.",
+      "severity": "medium",
+      "automated": true,
+      "test_ref": "test_the_rejection_reveals_nothing_about_the_code",
+      "status": "pass"
+    },
+    {
+      "id": "AC-005",
+      "title": "Route-model binding leaked which brew ids exist",
+      "category": "broken_access_control",
+      "owasp_web": ["A01", "A07"],
+      "surface": "S6",
+      "payload": "POST /api/brews/{id}/feedback without an access code, varying the id.",
+      "attack_goal": "Enumerate valid brew ids before authenticating.",
+      "expected_behavior": "Laravel resolves route-model binding BEFORE route middleware, so a bound model returned 404 for a missing id and 401 for an existing one — distinguishing them. The lookup is now explicit, so the gate runs first, and 'no such brew' and 'not yours' return the same response.",
+      "assertion": "Every id returns 401 when the access code is missing.",
+      "severity": "medium",
+      "automated": true,
+      "test_ref": "test_every_paid_endpoint_is_gated",
+      "status": "pass",
+      "notes": "Found while testing the access gate: the gate test failed on a status code mismatch and the underlying cause turned out to be an information leak that predated it."
     },
 
     {
@@ -799,13 +845,13 @@
   ],
 
   "owasp_web_coverage": {
-    "A01_broken_access_control": ["AC-001", "AC-002", "AC-003", "AC-004"],
+    "A01_broken_access_control": ["AC-001", "AC-002", "AC-003", "AC-004", "AC-005"],
     "A02_cryptographic_failures": ["SD-001", "SD-002", "SD-004", "SD-006", "SD-007", "SD-008", "PI-005"],
     "A03_injection": ["INJ-001", "INJ-002", "INJ-003", "INJ-004", "PI-001", "UPL-001", "UPL-003"],
     "A04_insecure_design": ["PI-016", "CFG-003", "UPL-002", "AC-004"],
     "A05_security_misconfiguration": ["CFG-001", "CFG-002", "CFG-003", "CFG-004", "CFG-005", "CFG-006", "CFG-007", "SD-005", "SD-006"],
     "A06_vulnerable_components": ["DEP-001"],
-    "A07_identification_and_auth_failures": ["AUTH-001", "AC-002"],
+    "A07_identification_and_auth_failures": ["AUTH-001", "AUTH-002", "AUTH-003", "AC-002", "AC-005"],
     "A08_software_and_data_integrity": ["PI-014", "UPL-001", "AC-004"],
     "A09_logging_and_monitoring_failures": ["LOG-001", "LOG-002", "SD-003", "SD-004"],
     "A10_ssrf": ["SSRF-001", "SSRF-002"]
