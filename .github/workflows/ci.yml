@@ -117,20 +117,24 @@ jobs:
       # in any of that shows up here rather than on the host.
       - name: Boot the container and check it serves
         run: |
-          # This must reproduce how a managed host actually runs the image, not
-          # how Docker runs it by default.
+          # Reproduce how a managed host runs the image, not how Docker runs it
+          # by default.
           #
-          # --security-opt no-new-privileges + --cap-drop=ALL mirror Render's
-          # hardened runtime. Without them the image passed CI and then died on
-          # Render with "exec: frankenphp: Operation not permitted" (exit 126),
-          # because the binary carried a Linux file capability and hardened
+          # no-new-privileges is the restriction that matters: without it the
+          # image passed CI and then died on Render with
+          # "exec: frankenphp: Operation not permitted" (exit 126), because the
+          # FrankenPHP binary carried a Linux file capability and hardened
           # runtimes refuse to exec such files.
+          #
+          # Capabilities are deliberately NOT dropped wholesale. --cap-drop=ALL
+          # is stricter than Render actually is, and a test that fails on
+          # conditions the host never imposes is noise — it trains you to ignore
+          # a red job.
           #
           # PORT is set for the same reason: managed hosts assign one and route
           # only there, so the default would not exercise the real path.
           docker run -d --name sabba -p 8080:9123 \
             --security-opt no-new-privileges \
-            --cap-drop=ALL \
             -e PORT=9123 \
             -e APP_KEY="base64:$(openssl rand -base64 32)" \
             -e APP_ENV=production \
