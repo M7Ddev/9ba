@@ -29,8 +29,19 @@ class ScanBagRequest extends FormRequest
                 'required',
                 'image',
                 'mimes:jpeg,jpg,png,webp',
-                'max:4096',            // kilobytes
-                'dimensions:max_width=4000,max_height=4000',
+
+                // 8 MB. The frontend downscales to roughly 250 KB before
+                // uploading, so this is only a backstop for a client where that
+                // failed. The previous 4 MB limit rejected ordinary phone
+                // photos outright.
+                'max:8192',
+
+                // No max_width/max_height rule. It used to cap at 4000px, and
+                // an iPhone shoots 4032x3024 — so every photo taken on an
+                // iPhone was rejected by 32 pixels, while a small image copied
+                // from a website worked. That looked like the scanner being
+                // broken rather than an upload limit. Byte size is the real
+                // constraint; pixel dimensions are not.
             ],
         ];
     }
@@ -41,8 +52,9 @@ class ScanBagRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'photo.max' => 'The photo must be 4 MB or smaller.',
+            'photo.max' => 'The photo must be 8 MB or smaller.',
             'photo.mimes' => 'The photo must be a JPEG, PNG or WebP image.',
+            'photo.image' => 'That file is not an image the server can read.',
         ];
     }
 }

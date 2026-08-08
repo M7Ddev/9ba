@@ -218,6 +218,7 @@ export async function generateRecipe({ language, setup }) {
     process: setup.process,
     flavor_notes: setup.flavorNotes,
     grinder: setup.grinder,
+    serve: setup.serve,
     client_id: getClientId(),
   });
 }
@@ -257,6 +258,7 @@ export async function adjustRecipe({ language, setup, recipe, feedback }) {
     process: setup.process,
     flavor_notes: setup.flavorNotes,
     grinder: setup.grinder,
+    serve: setup.serve,
     client_id: getClientId(),
     feedback,
     recipe,

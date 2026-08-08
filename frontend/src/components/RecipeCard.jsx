@@ -36,6 +36,27 @@ export default function RecipeCard({ t, recipe }) {
         </div>
       </div>
 
+      {/* Iced brews split the total into hot water and ice. Showing both stops
+          the reader pouring the full water_ml over the ice. */}
+      {recipe.ice_grams > 0 && (
+        <div className="stats stats-ice">
+          <div className="stat">
+            <span className="stat-value">
+              {recipe.brew_water_ml}
+              <small>{t.ml}</small>
+            </span>
+            <span className="stat-label">{t.brewWater}</span>
+          </div>
+          <div className="stat">
+            <span className="stat-value">
+              {recipe.ice_grams}
+              <small>{t.grams}</small>
+            </span>
+            <span className="stat-label">🧊 {t.ice}</span>
+          </div>
+        </div>
+      )}
+
       {/* Secondary details */}
       <dl className="details">
         <div className="detail">

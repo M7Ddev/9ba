@@ -45,6 +45,7 @@ export default function App() {
     process: 'Washed',
     flavorNotes: '',
     grinder: 'Other',
+    serve: 'Hot',
   });
 
   const [recipe, setRecipe] = useState(null);

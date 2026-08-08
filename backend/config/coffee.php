@@ -27,6 +27,40 @@ return [
 
     'roasts' => ['Light', 'Medium', 'Dark'],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Serving style
+    |--------------------------------------------------------------------------
+    | "Iced" here means Japanese iced / flash brew: brewing hot directly onto
+    | ice, rather than chilling a finished hot brew.
+    |
+    | The important arithmetic — and the thing people get wrong — is that the
+    | coffee dose is set by the TOTAL liquid, while only part of that total is
+    | poured as hot water. The rest is ice, which melts into the cup. Brewing a
+    | full 300 ml over 150 g of ice yields 450 ml of weak coffee.
+    |
+    | ice_fraction is the share of the total that arrives as ice.
+    | 0.4 is the widely used starting point: 300 ml total -> 120 g ice + 180 ml
+    | of brew water.
+    |
+    | Espresso is deliberately excluded: an iced shot is pulled normally and
+    | poured over ice, so the brew ratio itself does not change.
+    */
+    'serve_styles' => ['Hot', 'Iced'],
+
+    'iced' => [
+        'ice_fraction' => 0.4,
+
+        // Methods where ice replaces part of the brew water.
+        'dilution_methods' => ['V60', 'French Press', 'AeroPress'],
+
+        // Methods served over ice without altering the brew itself.
+        'over_ice_methods' => ['Espresso', 'Moka Pot'],
+
+        // Ice to put in the glass for an over-ice serve, in grams.
+        'serving_ice_g' => 120,
+    ],
+
     'tastes' => ['Strong', 'Balanced', 'Light', 'Less sour', 'Less bitter'],
 
     /** Accepted water / yield range in millilitres. */

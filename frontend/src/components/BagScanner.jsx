@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 
 import { scanBag } from '../lib/api.js';
+import { shrinkImage } from '../lib/image.js';
 
 /**
  * BagScanner
@@ -30,7 +31,11 @@ export default function BagScanner({ t, onScanned, disabled }) {
     setMessage(null);
 
     try {
-      const beans = await scanBag(file);
+      // Phone photos are far larger than the label needs, and used to be
+      // rejected by the upload limits before reaching the model.
+      const upload = await shrinkImage(file);
+
+      const beans = await scanBag(upload);
 
       if (!beans.found) {
         setMessage({ kind: 'warn', text: t.scanNotCoffee });
@@ -40,7 +45,14 @@ export default function BagScanner({ t, onScanned, disabled }) {
       onScanned(beans);
       setMessage({ kind: 'ok', text: beans.bean_name ? `${t.scanFilled} — ${beans.bean_name}` : t.scanFilled });
     } catch (error) {
-      setMessage({ kind: 'error', text: t.errors[error.message] ?? t.errors.UNKNOWN });
+      // A rejected upload is about the photo, not the coffee form — the generic
+      // "check your inputs" message sent people hunting through the dropdowns.
+      const text =
+        error.message === 'VALIDATION'
+          ? t.scanRejected
+          : (t.errors[error.message] ?? t.errors.UNKNOWN);
+
+      setMessage({ kind: 'error', text });
     } finally {
       setScanning(false);
       // Clear the input so picking the same file again still fires onChange.
@@ -50,10 +62,15 @@ export default function BagScanner({ t, onScanned, disabled }) {
 
   return (
     <div className="scanner">
+      {/*
+        accept="image/*" rather than a list of types: an iPhone stores photos as
+        HEIC, and a narrow accept list greys them out in the picker. Whatever is
+        chosen gets re-encoded to JPEG by shrinkImage before upload.
+      */}
       <input
         ref={inputRef}
         type="file"
-        accept="image/jpeg,image/png,image/webp"
+        accept="image/*"
         onChange={handleFile}
         className="visually-hidden"
         id="bag-photo"

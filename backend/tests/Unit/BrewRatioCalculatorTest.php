@@ -95,6 +95,76 @@ class BrewRatioCalculatorTest extends TestCase
         $this->assertSame(20.0, $result['coffee_grams']);
     }
 
+    public function test_a_hot_brew_uses_all_the_water_and_no_ice(): void
+    {
+        $result = $this->calculator->calculate([
+            'method' => 'V60', 'water_ml' => 300, 'ratio' => '1:16', 'serve' => 'Hot',
+        ]);
+
+        $this->assertSame('Hot', $result['serve']);
+        $this->assertSame(300, $result['brew_water_ml']);
+        $this->assertSame(0, $result['ice_grams']);
+    }
+
+    /**
+     * The headline case. The dose is set by the TOTAL drink, while only part of
+     * that total is poured as hot water — brewing the full amount over ice is
+     * the mistake this exists to prevent.
+     */
+    public function test_an_iced_brew_splits_the_total_into_water_and_ice(): void
+    {
+        $result = $this->calculator->calculate([
+            'method' => 'V60', 'water_ml' => 300, 'ratio' => '1:16', 'serve' => 'Iced',
+        ]);
+
+        // 40% of 300 = 120 g ice, leaving 180 ml to brew with.
+        $this->assertSame(120, $result['ice_grams']);
+        $this->assertSame(180, $result['brew_water_ml']);
+
+        // Water and ice must add back up to the total the user asked for.
+        $this->assertSame(300, $result['brew_water_ml'] + $result['ice_grams']);
+
+        // And crucially the dose is unchanged: still 300/16, not 180/16.
+        $this->assertSame(18.8, $result['coffee_grams']);
+        $this->assertSame(300, $result['water_ml']);
+    }
+
+    public function test_iced_and_hot_produce_the_same_dose(): void
+    {
+        $hot = $this->calculator->calculate([
+            'method' => 'V60', 'water_ml' => 300, 'ratio' => '1:16', 'serve' => 'Hot',
+        ]);
+        $iced = $this->calculator->calculate([
+            'method' => 'V60', 'water_ml' => 300, 'ratio' => '1:16', 'serve' => 'Iced',
+        ]);
+
+        // A weaker dose for iced would mean the melted ice dilutes it twice.
+        $this->assertSame($hot['coffee_grams'], $iced['coffee_grams']);
+    }
+
+    public function test_espresso_is_served_over_ice_without_changing_the_brew(): void
+    {
+        $result = $this->calculator->calculate([
+            'method' => 'Espresso', 'water_ml' => 36, 'ratio' => '1:2', 'serve' => 'Iced',
+        ]);
+
+        // The shot is pulled normally; the ice goes in the glass.
+        $this->assertSame(36, $result['brew_water_ml']);
+        $this->assertSame(18.0, $result['coffee_grams']);
+        $this->assertGreaterThan(0, $result['ice_grams']);
+        $this->assertStringContainsString('unchanged', $result['serve_note']);
+    }
+
+    public function test_serve_defaults_to_hot_when_not_supplied(): void
+    {
+        $result = $this->calculator->calculate([
+            'method' => 'V60', 'water_ml' => 300, 'ratio' => '1:16',
+        ]);
+
+        $this->assertSame('Hot', $result['serve']);
+        $this->assertSame(0, $result['ice_grams']);
+    }
+
     public function test_the_declaration_lists_every_configured_method(): void
     {
         $declaration = $this->calculator->declaration();

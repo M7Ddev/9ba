@@ -46,6 +46,8 @@ class GenerateRecipeRequest extends FormRequest
 
             'grinder' => ['nullable', 'string', Rule::in(array_keys(config('coffee.grinders')))],
 
+            'serve' => ['nullable', 'string', Rule::in(config('coffee.serve_styles'))],
+
             // Anonymous per-browser id used to group the brew log. Not a
             // credential: it grants no access and identifies no person.
             'client_id' => ['nullable', 'string', 'alpha_dash', 'max:64'],
@@ -67,6 +69,7 @@ class GenerateRecipeRequest extends FormRequest
             'origin' => $this->string('origin')->toString(),
             'process' => $this->string('process')->toString(),
             'grinder' => $this->filled('grinder') ? $this->string('grinder')->toString() : 'Other',
+            'serve' => $this->filled('serve') ? $this->string('serve')->toString() : 'Hot',
             'client_id' => $this->string('client_id')->toString(),
             // Collapse whitespace so the prompt cannot be reshaped with newlines.
             'flavor_notes' => trim(preg_replace('/\s+/u', ' ', $this->string('flavor_notes')->toString()) ?? ''),

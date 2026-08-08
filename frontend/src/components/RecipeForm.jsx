@@ -2,6 +2,7 @@ import {
   BREW_METHODS,
   ROAST_LEVELS,
   TASTE_PREFERENCES,
+  SERVE_STYLES,
   ORIGINS,
   PROCESSES,
   GRINDERS,
@@ -72,6 +73,19 @@ export default function RecipeForm({ t, setup, onChange, onSubmit, onScanned, lo
             {TASTE_PREFERENCES.map((taste) => (
               <option key={taste} value={taste}>
                 {t.tastes[taste]}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        {/* Iced uses the Japanese method: part of the total liquid is ice, and
+            the backend computes the split so the dose stays correct. */}
+        <label className="field">
+          <span className="field-label">{t.serve}</span>
+          <select className="input" value={setup.serve} onChange={update('serve')}>
+            {SERVE_STYLES.map((style) => (
+              <option key={style} value={style}>
+                {t.serves[style]}
               </option>
             ))}
           </select>

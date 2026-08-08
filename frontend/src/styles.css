@@ -366,6 +366,16 @@ select.input {
   color: var(--brown-soft);
 }
 
+/* The hot-water / ice split, shown only for an iced brew. */
+.stats-ice {
+  grid-template-columns: repeat(2, 1fr);
+  border-block-start: none;
+}
+
+.stats-ice .stat-value {
+  font-size: 1.5rem;
+}
+
 .details {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

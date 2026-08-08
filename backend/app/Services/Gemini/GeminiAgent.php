@@ -219,8 +219,10 @@ class GeminiAgent
             'Design a brewing recipe for this setup:',
             "- Brew method: {$setup['method']}",
             "- Roast level: {$setup['roast']}",
-            "- Water amount: {$setup['amount_ml']} ml".($setup['method'] === 'Espresso' ? ' (target yield)' : ''),
+            "- Water amount: {$setup['amount_ml']} ml".($setup['method'] === 'Espresso' ? ' (target yield)' : '')
+                .' — this is the TOTAL finished drink, including any ice',
             "- Taste preference: {$setup['taste']}",
+            "- Served: {$setup['serve']}",
             ...$this->beanLines($setup),
             "- Grinder: {$setup['grinder']}",
             "- User id for history lookup: {$setup['client_id']}",
@@ -231,9 +233,12 @@ class GeminiAgent
             '3. Call get_grind_setting for their grinder and brew method, passing the grind adjustment',
             '   the bean profile asked for.',
             '4. Take the profile\'s recommended_ratio, adjust it only if the taste preference or the',
-            '   history requires, and pass it to calculate_brew_ratio to get the dose.',
+            '   history requires, and pass it to calculate_brew_ratio — including the serve style',
+            '   above, so the ice split is calculated for you.',
             '5. Return the JSON recipe, using the profile\'s recommended_temp_c, the grinder\'s click',
             '   range in `grind_clicks`, and the grind texture in `grind_size`.',
+            '   For an iced brew, the steps MUST pour only `brew_water_ml`, not the full water amount,',
+            '   and must start by putting `ice_grams` of ice in the vessel. Follow the tool\'s serve_note.',
             '',
             $this->languageDirective($language),
         ]);
@@ -537,6 +542,13 @@ class GeminiAgent
             $recipe['coffee_grams'] = $ratioResult['coffee_grams'];
             $recipe['ratio'] = $ratioResult['ratio'];
             $recipe['water_ml'] = $ratioResult['water_ml'];
+
+            // The ice split matters more than the others, because getting it
+            // wrong is silent: a recipe that pours the full water amount over
+            // ice still looks plausible, it just makes weak coffee. The model
+            // does not get a vote on these two numbers.
+            $recipe['brew_water_ml'] = $ratioResult['brew_water_ml'];
+            $recipe['ice_grams'] = $ratioResult['ice_grams'];
         }
 
         // Same for the grinder clicks, which the model likes to round off.
@@ -641,6 +653,8 @@ class GeminiAgent
             '  "water_temp_c": number,',
             '  "grind_size": string,     // e.g. "medium-fine, like table salt"',
             '  "grind_clicks": string,   // e.g. "20-26 clicks" from get_grind_setting; "" if unavailable',
+            '  "brew_water_ml": number,  // hot water actually poured — LESS than water_ml for an iced brew',
+            '  "ice_grams": number,      // 0 for a hot brew',
             '  "total_time": string,     // e.g. "3:00"',
             '  "steps": string[],        // 4-8 short, actionable steps with timings',
             '  "notes": string,          // one or two sentences of advice',

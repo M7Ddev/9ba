@@ -20,6 +20,7 @@ export const ROAST_LEVELS = ['Light', 'Medium', 'Dark'];
 export const TASTE_PREFERENCES = ['Strong', 'Balanced', 'Light', 'Less sour', 'Less bitter'];
 
 // Must match the keys of config/coffee.php on the backend.
+export const SERVE_STYLES = ['Hot', 'Iced'];
 export const ORIGINS = ['Colombia', 'Ethiopia', 'Yemen', 'Brazil', 'Kenya', 'Other'];
 export const PROCESSES = ['Washed', 'Natural', 'Honey', 'Anaerobic'];
 export const GRINDERS = [
@@ -64,6 +65,10 @@ export const translations = {
     amount: 'كمية الماء (مل)',
     amountEspresso: 'كمية المشروب (مل)',
     taste: 'التفضيل في الطعم',
+    serve: 'التقديم',
+    serves: { Hot: 'ساخنة', Iced: 'مثلجة' },
+    ice: 'الثلج',
+    brewWater: 'ماء التحضير',
     origin: 'المنشأ',
     process: 'طريقة المعالجة',
     flavorNotes: 'الإيحاءات المكتوبة على الكيس (اختياري)',
@@ -76,6 +81,7 @@ export const translations = {
     scanning: 'جارٍ القراءة…',
     scanHint: 'التقط صورة للملصق وسنملأ الحقول تلقائيًا.',
     scanFilled: 'تم ملء بيانات الحبوب من الصورة.',
+    scanRejected: 'تعذّر قراءة هذه الصورة. جرّب صورة أوضح أو أصغر حجمًا.',
     scanNotCoffee: 'لم نتعرف على كيس قهوة في الصورة. جرّب صورة أوضح للملصق.',
 
     // Brew timer
@@ -201,6 +207,10 @@ export const translations = {
     amount: 'Water amount (ml)',
     amountEspresso: 'Target yield (ml)',
     taste: 'Taste preference',
+    serve: 'Serve',
+    serves: { Hot: 'Hot', Iced: 'Iced' },
+    ice: 'Ice',
+    brewWater: 'Brew water',
     origin: 'Origin',
     process: 'Processing method',
     flavorNotes: 'Flavour notes on the bag (optional)',
@@ -213,6 +223,7 @@ export const translations = {
     scanning: 'Reading…',
     scanHint: 'Snap the label and we will fill the fields for you.',
     scanFilled: 'Bean details filled in from the photo.',
+    scanRejected: 'That image could not be read. Try a clearer or smaller photo.',
     scanNotCoffee: 'That does not look like a coffee bag. Try a clearer shot of the label.',
 
     // Brew timer

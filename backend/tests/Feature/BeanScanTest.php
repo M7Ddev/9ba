@@ -125,10 +125,35 @@ class BeanScanTest extends TestCase
     {
         Http::fake();
 
+        // Over the 8 MB cap. The limit used to be 4 MB, which rejected ordinary
+        // phone photos — the frontend now downscales before uploading, so this
+        // is only a backstop.
         $this->postJson('/api/beans/scan', [
-            'photo' => UploadedFile::fake()->image('huge.jpg', 800, 800)->size(5000),
+            'photo' => UploadedFile::fake()->image('huge.jpg', 800, 800)->size(9000),
         ])->assertStatus(422);
 
         Http::assertNothingSent();
+    }
+
+    /**
+     * Regression: the dimensions rule capped images at 4000px, and an iPhone
+     * shoots 4032x3024 — so every photo taken on an iPhone was rejected by 32
+     * pixels, while a small image copied from a website worked fine. It looked
+     * like the scanner was broken rather than the upload being refused.
+     */
+    public function test_it_accepts_a_photo_at_phone_camera_resolution(): void
+    {
+        Http::fake(['*' => Http::response(['candidates' => [[
+            'content' => ['role' => 'model', 'parts' => [['text' => json_encode([
+                'found' => true, 'origin' => 'Colombia', 'process' => 'Washed',
+                'roast' => 'Medium', 'bean_name' => 'Peach', 'flavor_notes' => 'peach, jasmine',
+            ])]]],
+        ]]])]);
+
+        $this->postJson('/api/beans/scan', [
+            'photo' => UploadedFile::fake()->image('iphone.jpg', 4032, 3024)->size(3500),
+        ])
+            ->assertOk()
+            ->assertJsonPath('beans.origin', 'Colombia');
     }
 }

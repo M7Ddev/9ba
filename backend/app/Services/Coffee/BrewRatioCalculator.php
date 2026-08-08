@@ -47,6 +47,12 @@ class BrewRatioCalculator
                         'type' => 'STRING',
                         'description' => 'Brew ratio as a string, e.g. "1:16" for V60 or "1:2" for espresso.',
                     ],
+                    'serve' => [
+                        'type' => 'STRING',
+                        'description' => 'How the coffee is served. "Iced" means Japanese iced / flash '
+                            .'brew: part of the total liquid is supplied as ice. Defaults to "Hot".',
+                        'enum' => config('coffee.serve_styles'),
+                    ],
                 ],
                 'required' => ['method', 'water_ml', 'ratio'],
             ],
@@ -80,6 +86,10 @@ class BrewRatioCalculator
         }
 
         // 1 ml of water ~= 1 g, the standard assumption in coffee brewing.
+        //
+        // Note this is computed from the TOTAL liquid, before any ice split. The
+        // dose must match the strength of the finished drink, not the volume
+        // that happens to pass through the brewer.
         $coffeeGrams = round($water / $parts, 1);
 
         return [
@@ -87,6 +97,7 @@ class BrewRatioCalculator
             'water_ml' => (int) round($water),
             'ratio' => $this->formatRatio($parts),
             'coffee_grams' => $coffeeGrams,
+            ...$this->serveSplit($method, (string) ($args['serve'] ?? 'Hot'), $water),
             'adjustment_note' => $adjusted
                 ? sprintf(
                     'The requested ratio was outside the sensible range for %s (1:%s to 1:%s); 1:%s was used instead.',
@@ -96,6 +107,63 @@ class BrewRatioCalculator
                     $this->trimNumber($parts),
                 )
                 : null,
+        ];
+    }
+
+    /**
+     * Split the total liquid into brew water and ice.
+     *
+     * This is the part of an iced recipe people get wrong. The dose is set by
+     * the TOTAL liquid, but only some of that total is poured through the
+     * brewer — the rest is ice that melts into the cup. Pouring the full amount
+     * over a glass of ice produces far more, far weaker coffee than intended.
+     *
+     * Two distinct behaviours:
+     *
+     *   Dilution methods (V60, French Press, AeroPress) — the ice IS part of
+     *   the recipe. Brew water is reduced by the weight of the ice.
+     *
+     *   Over-ice methods (Espresso, Moka Pot) — the brew is unchanged and
+     *   simply poured over ice, so the ratio maths must not be touched.
+     *
+     * @return array<string, mixed>
+     */
+    private function serveSplit(string $method, string $serve, float $totalMl): array
+    {
+        if ($serve !== 'Iced') {
+            return [
+                'serve' => 'Hot',
+                'brew_water_ml' => (int) round($totalMl),
+                'ice_grams' => 0,
+            ];
+        }
+
+        $config = config('coffee.iced');
+
+        // Espresso and Moka Pot: brew normally, serve over ice.
+        if (in_array($method, $config['over_ice_methods'], true)) {
+            return [
+                'serve' => 'Iced',
+                'brew_water_ml' => (int) round($totalMl),
+                'ice_grams' => $config['serving_ice_g'],
+                'serve_note' => 'Brew exactly as normal and pour it over '
+                    .$config['serving_ice_g'].' g of ice in the serving glass. The brew ratio is '
+                    .'unchanged — the ice only chills and lightly dilutes the finished drink.',
+            ];
+        }
+
+        // Dilution methods: ice replaces part of the brew water.
+        $ice = (int) round($totalMl * $config['ice_fraction']);
+        $brewWater = (int) round($totalMl) - $ice;
+
+        return [
+            'serve' => 'Iced',
+            'brew_water_ml' => $brewWater,
+            'ice_grams' => $ice,
+            'serve_note' => "Japanese iced method. Put {$ice} g of ice in the carafe BEFORE brewing, "
+                ."then brew with only {$brewWater} ml of hot water directly onto it. The ice melts "
+                .'into the drink, so the total liquid and the coffee dose are unchanged. Brew hotter '
+                .'(94-96 C) and one step finer than the hot version, because contact time is shorter.',
         ];
     }
 
