@@ -46,6 +46,9 @@ export default function App() {
     flavorNotes: '',
     grinder: 'Other',
     serve: 'Hot',
+    // Optional overrides — empty means "assistant decides".
+    coffeeGrams: '',
+    iceGrams: '',
   });
 
   const [recipe, setRecipe] = useState(null);

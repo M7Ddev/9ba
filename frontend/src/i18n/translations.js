@@ -30,6 +30,7 @@ export const GRINDERS = [
   'Timemore C2',
   'Baratza Encore',
   'Hario Skerton Pro',
+  'DF54',
 ];
 
 export const translations = {
@@ -69,6 +70,9 @@ export const translations = {
     serves: { Hot: 'ساخنة', Iced: 'مثلجة' },
     ice: 'الثلج',
     brewWater: 'ماء التحضير',
+    coffeeGrams: 'كمية القهوة (جم) — اختياري',
+    iceGrams: 'كمية الثلج (جم) — اختياري',
+    autoPlaceholder: 'اتركه فارغًا ليختار المساعد',
     origin: 'المنشأ',
     process: 'طريقة المعالجة',
     flavorNotes: 'الإيحاءات المكتوبة على الكيس (اختياري)',
@@ -211,6 +215,9 @@ export const translations = {
     serves: { Hot: 'Hot', Iced: 'Iced' },
     ice: 'Ice',
     brewWater: 'Brew water',
+    coffeeGrams: 'Coffee dose (g) — optional',
+    iceGrams: 'Ice (g) — optional',
+    autoPlaceholder: 'Leave blank and the assistant decides',
     origin: 'Origin',
     process: 'Processing method',
     flavorNotes: 'Flavour notes on the bag (optional)',

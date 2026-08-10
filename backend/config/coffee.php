@@ -199,6 +199,18 @@ return [
                 'French Press' => [28, 32],
             ],
         ],
+        'DF54' => [
+            'step' => 0.5,
+            'note' => 'Numbered dial, read to one decimal. Stepless, so treat these as a starting '
+                .'point and dial in from there — burr alignment and seasoning shift them.',
+            'settings' => [
+                'Espresso' => [1.5, 2.5],
+                'Moka Pot' => [2.5, 3.5],
+                'AeroPress' => [3.5, 4.5],
+                'V60' => [4.5, 5.5],
+                'French Press' => [6.5, 8.0],
+            ],
+        ],
         'Hario Skerton Pro' => [
             'step' => 1,
             'note' => 'Counted from closed. Few clicks overall, so each one is a big jump.',

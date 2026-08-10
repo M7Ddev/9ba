@@ -48,6 +48,11 @@ class GenerateRecipeRequest extends FormRequest
 
             'serve' => ['nullable', 'string', Rule::in(config('coffee.serve_styles'))],
 
+            // Optional overrides. Blank means "you decide", which is the default
+            // behaviour and what most people will use.
+            'coffee_grams' => ['nullable', 'numeric', 'min:1', 'max:200'],
+            'ice_grams' => ['nullable', 'numeric', 'min:1', 'max:2000'],
+
             // Anonymous per-browser id used to group the brew log. Not a
             // credential: it grants no access and identifies no person.
             'client_id' => ['nullable', 'string', 'alpha_dash', 'max:64'],
@@ -70,6 +75,8 @@ class GenerateRecipeRequest extends FormRequest
             'process' => $this->string('process')->toString(),
             'grinder' => $this->filled('grinder') ? $this->string('grinder')->toString() : 'Other',
             'serve' => $this->filled('serve') ? $this->string('serve')->toString() : 'Hot',
+            'coffee_grams' => $this->filled('coffee_grams') ? (float) $this->input('coffee_grams') : null,
+            'ice_grams' => $this->filled('ice_grams') ? (float) $this->input('ice_grams') : null,
             'client_id' => $this->string('client_id')->toString(),
             // Collapse whitespace so the prompt cannot be reshaped with newlines.
             'flavor_notes' => trim(preg_replace('/\s+/u', ' ', $this->string('flavor_notes')->toString()) ?? ''),

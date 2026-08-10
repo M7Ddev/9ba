@@ -219,6 +219,10 @@ export async function generateRecipe({ language, setup }) {
     flavor_notes: setup.flavorNotes,
     grinder: setup.grinder,
     serve: setup.serve,
+    // Omitted entirely when blank, so the backend treats them as "not specified"
+    // rather than as a zero.
+    ...(setup.coffeeGrams ? { coffee_grams: Number(setup.coffeeGrams) } : {}),
+    ...(setup.iceGrams ? { ice_grams: Number(setup.iceGrams) } : {}),
     client_id: getClientId(),
   });
 }
@@ -259,6 +263,10 @@ export async function adjustRecipe({ language, setup, recipe, feedback }) {
     flavor_notes: setup.flavorNotes,
     grinder: setup.grinder,
     serve: setup.serve,
+    // Omitted entirely when blank, so the backend treats them as "not specified"
+    // rather than as a zero.
+    ...(setup.coffeeGrams ? { coffee_grams: Number(setup.coffeeGrams) } : {}),
+    ...(setup.iceGrams ? { ice_grams: Number(setup.iceGrams) } : {}),
     client_id: getClientId(),
     feedback,
     recipe,

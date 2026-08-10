@@ -94,28 +94,49 @@ class GrinderCalibrator
         }
 
         // Shift the whole window when the bean profile asked for a step change.
-        $step = (int) $grinder['step'];
+        // Steps are floats because not every grinder is clicked: the DF54 has a
+        // numbered dial read to one decimal, so 0.5 is a real adjustment.
+        $step = (float) $grinder['step'];
         $shift = match ($adjustment) {
             'coarser' => $step,
             'finer' => -$step,
-            default => 0,
+            default => 0.0,
         };
 
-        // Never let a shift push the setting below 1 click.
-        $min = max(1, $window[0] + $shift);
-        $max = max($min + 1, $window[1] + $shift);
+        // Never let a shift push the setting to zero or below.
+        $min = max($step, (float) $window[0] + $shift);
+        $max = max($min + $step, (float) $window[1] + $shift);
+
+        $unit = $this->isStepless($grinder) ? 'on the dial' : 'clicks';
 
         return [
             'grinder' => $grinderKey,
             'method' => $methodKey,
             'adjustment' => $adjustment,
             'clicks_available' => true,
+            // Numbers stay numbers; only the label is formatted for display.
+            // Floats because a stepless grinder like the DF54 is set to 4.5.
             'clicks_min' => $min,
             'clicks_max' => $max,
-            'clicks_label' => "{$min}-{$max} clicks",
+            'clicks_label' => $this->format($min).'-'.$this->format($max).' '.$unit,
             'grinder_note' => $grinder['note'],
-            'guidance' => 'Put this range in the `grind_clicks` field, and still describe the texture '
-                .'in `grind_size`. Tell the user it is a starting point to dial in from.',
+            'guidance' => 'Put this range in the `grind_clicks` field verbatim, and still describe the '
+                .'texture in `grind_size`. Tell the user it is a starting point to dial in from.',
         ];
+    }
+
+    /**
+     * A grinder whose adjustment is a continuous dial rather than detents.
+     * Saying "4.5 clicks" to someone holding a stepless grinder is meaningless.
+     */
+    private function isStepless(array $grinder): bool
+    {
+        return ((float) $grinder['step']) < 1.0;
+    }
+
+    /** 5.0 -> "5", 4.5 -> "4.5" — no trailing zeros on whole numbers. */
+    private function format(float $value): string
+    {
+        return rtrim(rtrim(number_format($value, 1, '.', ''), '0'), '.');
     }
 }

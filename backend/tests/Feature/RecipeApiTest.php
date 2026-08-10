@@ -477,7 +477,8 @@ class RecipeApiTest extends TestCase
 
             return $result !== null
                 && $result['adjustment'] === 'coarser'
-                && $result['clicks_min'] === 22;
+                // Float: settings are decimals so a stepless grinder can say 4.5.
+                && $result['clicks_min'] === 22.0;
         });
     }
 

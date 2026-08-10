@@ -165,6 +165,74 @@ class BrewRatioCalculatorTest extends TestCase
         $this->assertSame(0, $result['ice_grams']);
     }
 
+    public function test_a_user_supplied_dose_drives_the_ratio_instead(): void
+    {
+        $result = $this->calculator->calculate([
+            'method' => 'V60', 'water_ml' => 300, 'ratio' => '1:16', 'coffee_grams' => 20,
+        ]);
+
+        // The dose the user weighed is kept exactly, and the ratio follows.
+        $this->assertSame(20.0, $result['coffee_grams']);
+        $this->assertSame('1:15', $result['ratio']);
+        $this->assertTrue($result['dose_set_by_user']);
+    }
+
+    /**
+     * Clamping exists to catch a model inventing nonsense. A person who typed a
+     * dose measured it, so it is kept — but flagged, so the recipe can warn.
+     */
+    public function test_an_unusual_user_dose_is_kept_but_flagged(): void
+    {
+        $result = $this->calculator->calculate([
+            'method' => 'V60', 'water_ml' => 300, 'ratio' => '1:16', 'coffee_grams' => 40,
+        ]);
+
+        $this->assertSame(40.0, $result['coffee_grams']); // not overridden
+        $this->assertStringContainsString('outside the usual', $result['adjustment_note']);
+        $this->assertStringContainsString('stronger', $result['adjustment_note']);
+    }
+
+    public function test_a_user_supplied_ice_amount_is_used(): void
+    {
+        $result = $this->calculator->calculate([
+            'method' => 'V60', 'water_ml' => 300, 'ratio' => '1:16',
+            'serve' => 'Iced', 'ice_grams' => 150,
+        ]);
+
+        $this->assertSame(150, $result['ice_grams']);
+        $this->assertSame(150, $result['brew_water_ml']);
+        $this->assertSame(300, $result['ice_grams'] + $result['brew_water_ml']);
+        $this->assertTrue($result['ice_set_by_user']);
+    }
+
+    /**
+     * Unlike the dose, ice IS clamped: too much leaves too little water to wet
+     * the grounds, which is not a preference but a brew that cannot work.
+     */
+    public function test_an_impossible_ice_amount_is_clamped(): void
+    {
+        $result = $this->calculator->calculate([
+            'method' => 'V60', 'water_ml' => 300, 'ratio' => '1:16',
+            'serve' => 'Iced', 'ice_grams' => 290,
+        ]);
+
+        $this->assertSame(210, $result['ice_grams']); // 70% ceiling
+        $this->assertGreaterThan(0, $result['brew_water_ml']);
+        $this->assertStringContainsString('adjusted', $result['ice_clamped_note']);
+    }
+
+    public function test_blank_overrides_keep_the_original_behaviour(): void
+    {
+        $result = $this->calculator->calculate([
+            'method' => 'V60', 'water_ml' => 300, 'ratio' => '1:16', 'serve' => 'Iced',
+        ]);
+
+        $this->assertSame(18.8, $result['coffee_grams']);
+        $this->assertFalse($result['dose_set_by_user']);
+        $this->assertSame(120, $result['ice_grams']); // the 40% default
+        $this->assertFalse($result['ice_set_by_user']);
+    }
+
     public function test_the_declaration_lists_every_configured_method(): void
     {
         $declaration = $this->calculator->declaration();

@@ -91,6 +91,40 @@ export default function RecipeForm({ t, setup, onChange, onSubmit, onScanned, lo
           </select>
         </label>
 
+        {/* Optional. Blank keeps the original behaviour — the dose is derived
+            from the ratio. Filled means the user weighed it, and the ratio is
+            derived from the dose instead. */}
+        <label className="field">
+          <span className="field-label">{t.coffeeGrams}</span>
+          <input
+            type="number"
+            className="input"
+            value={setup.coffeeGrams}
+            onChange={update('coffeeGrams')}
+            placeholder={t.autoPlaceholder}
+            min="1"
+            max="200"
+            step="0.1"
+          />
+        </label>
+
+        {/* Only meaningful for an iced brew, so it is not shown otherwise. */}
+        {setup.serve === 'Iced' && (
+          <label className="field">
+            <span className="field-label">{t.iceGrams}</span>
+            <input
+              type="number"
+              className="input"
+              value={setup.iceGrams}
+              onChange={update('iceGrams')}
+              placeholder={t.autoPlaceholder}
+              min="1"
+              max="2000"
+              step="1"
+            />
+          </label>
+        )}
+
         {/* Feeds get_grind_setting, which turns "medium-fine" into click numbers. */}
         <label className="field">
           <span className="field-label">{t.grinder}</span>

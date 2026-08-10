@@ -53,6 +53,17 @@ class BrewRatioCalculator
                             .'brew: part of the total liquid is supplied as ice. Defaults to "Hot".',
                         'enum' => config('coffee.serve_styles'),
                     ],
+                    'coffee_grams' => [
+                        'type' => 'NUMBER',
+                        'description' => 'ONLY when the user stated a dose they want to use. Pass it '
+                            .'through exactly; the ratio is then derived from it. Omit otherwise, and '
+                            .'the dose is calculated from the ratio.',
+                    ],
+                    'ice_grams' => [
+                        'type' => 'NUMBER',
+                        'description' => 'ONLY when the user stated how much ice to use, for an iced '
+                            .'brew. Omit otherwise and a sensible split is chosen.',
+                    ],
                 ],
                 'required' => ['method', 'water_ml', 'ratio'],
             ],
@@ -76,37 +87,75 @@ class BrewRatioCalculator
             return ['error' => 'water_ml must be a positive number.'];
         }
 
-        // Decide which ratio is actually used, and tell the model if we overrode it.
-        $parts = $this->parseRatio($args['ratio'] ?? null);
+        // The user may have weighed out a dose already. If so the arithmetic
+        // runs the other way: dose + water gives the ratio, instead of ratio +
+        // water giving the dose.
+        $userDose = filter_var($args['coffee_grams'] ?? null, FILTER_VALIDATE_FLOAT);
+        $doseFromUser = $userDose !== false && $userDose > 0;
+
         $adjusted = false;
+        $unusualRatio = false;
 
-        if ($parts === null || $parts < $limits['min'] || $parts > $limits['max']) {
-            $parts = $limits['fallback'];
-            $adjusted = true;
+        if ($doseFromUser) {
+            $coffeeGrams = round($userDose, 1);
+            $parts = round($water / $coffeeGrams, 2);
+
+            // Deliberately NOT clamped. Clamping exists to catch a model
+            // inventing a 1:40 espresso; a person who typed 25 g weighed it,
+            // and silently brewing something else would be worse than brewing
+            // what they asked for. Flag it instead so the recipe can mention it.
+            $unusualRatio = $parts < $limits['min'] || $parts > $limits['max'];
+        } else {
+            // Decide which ratio is used, and tell the model if we overrode it.
+            $parts = $this->parseRatio($args['ratio'] ?? null);
+
+            if ($parts === null || $parts < $limits['min'] || $parts > $limits['max']) {
+                $parts = $limits['fallback'];
+                $adjusted = true;
+            }
+
+            // 1 ml of water ~= 1 g, the standard assumption in coffee brewing.
+            //
+            // Computed from the TOTAL liquid, before any ice split: the dose
+            // must match the strength of the finished drink, not the volume
+            // that happens to pass through the brewer.
+            $coffeeGrams = round($water / $parts, 1);
         }
-
-        // 1 ml of water ~= 1 g, the standard assumption in coffee brewing.
-        //
-        // Note this is computed from the TOTAL liquid, before any ice split. The
-        // dose must match the strength of the finished drink, not the volume
-        // that happens to pass through the brewer.
-        $coffeeGrams = round($water / $parts, 1);
 
         return [
             'method' => $method,
             'water_ml' => (int) round($water),
             'ratio' => $this->formatRatio($parts),
             'coffee_grams' => $coffeeGrams,
-            ...$this->serveSplit($method, (string) ($args['serve'] ?? 'Hot'), $water),
-            'adjustment_note' => $adjusted
-                ? sprintf(
+            'dose_set_by_user' => $doseFromUser,
+            ...$this->serveSplit(
+                $method,
+                (string) ($args['serve'] ?? 'Hot'),
+                $water,
+                $args['ice_grams'] ?? null,
+            ),
+            'adjustment_note' => match (true) {
+                $adjusted => sprintf(
                     'The requested ratio was outside the sensible range for %s (1:%s to 1:%s); 1:%s was used instead.',
                     $method,
                     $this->trimNumber($limits['min']),
                     $this->trimNumber($limits['max']),
                     $this->trimNumber($parts),
-                )
-                : null,
+                ),
+                $unusualRatio => sprintf(
+                    'The user asked for %s g with %d ml, which is 1:%s — outside the usual %s range of '
+                    .'1:%s to 1:%s. Their dose has been kept as requested; mention in notes that this '
+                    .'will taste %s than typical.',
+                    $this->trimNumber($coffeeGrams),
+                    (int) round($water),
+                    $this->trimNumber($parts),
+                    $method,
+                    $this->trimNumber($limits['min']),
+                    $this->trimNumber($limits['max']),
+                    $parts < $limits['min'] ? 'stronger' : 'weaker',
+                ),
+                default => null,
+            },
         ];
     }
 
@@ -128,7 +177,7 @@ class BrewRatioCalculator
      *
      * @return array<string, mixed>
      */
-    private function serveSplit(string $method, string $serve, float $totalMl): array
+    private function serveSplit(string $method, string $serve, float $totalMl, mixed $iceOverride = null): array
     {
         if ($serve !== 'Iced') {
             return [
@@ -153,13 +202,34 @@ class BrewRatioCalculator
         }
 
         // Dilution methods: ice replaces part of the brew water.
-        $ice = (int) round($totalMl * $config['ice_fraction']);
+        $requested = filter_var($iceOverride, FILTER_VALIDATE_FLOAT);
+        $iceFromUser = $requested !== false && $requested > 0;
+
+        if ($iceFromUser) {
+            // Clamped, unlike the dose. Too much ice leaves too little water to
+            // wet the grounds at all, which is not a taste preference — it is a
+            // brew that cannot physically work.
+            $ice = (int) round(max($totalMl * 0.1, min($requested, $totalMl * 0.7)));
+        } else {
+            $ice = (int) round($totalMl * $config['ice_fraction']);
+        }
+
         $brewWater = (int) round($totalMl) - $ice;
+        $clamped = $iceFromUser && $ice !== (int) round($requested);
 
         return [
             'serve' => 'Iced',
             'brew_water_ml' => $brewWater,
             'ice_grams' => $ice,
+            'ice_set_by_user' => $iceFromUser,
+            'ice_clamped_note' => $clamped
+                ? sprintf(
+                    'The requested %d g of ice was adjusted to %d g: ice must stay between 10%% and '
+                    .'70%% of the total so there is enough water to brew with.',
+                    (int) round($requested),
+                    $ice,
+                )
+                : null,
             'serve_note' => "Japanese iced method. Put {$ice} g of ice in the carafe BEFORE brewing, "
                 ."then brew with only {$brewWater} ml of hot water directly onto it. The ice melts "
                 .'into the drink, so the total liquid and the coffee dose are unchanged. Brew hotter '

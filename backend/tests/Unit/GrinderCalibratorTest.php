@@ -27,9 +27,37 @@ class GrinderCalibratorTest extends TestCase
         ]);
 
         $this->assertTrue($result['clicks_available']);
-        $this->assertSame(20, $result['clicks_min']);
-        $this->assertSame(26, $result['clicks_max']);
+        $this->assertSame(20.0, $result['clicks_min']);
+        $this->assertSame(26.0, $result['clicks_max']);
         $this->assertSame('20-26 clicks', $result['clicks_label']);
+    }
+
+    /**
+     * The DF54 is stepless with a numbered dial, so its settings are decimals
+     * and "clicks" would be the wrong word to put in front of a user.
+     */
+    public function test_a_stepless_grinder_reports_decimal_dial_settings(): void
+    {
+        $result = $this->calibrator->calibrate([
+            'grinder' => 'DF54',
+            'method' => 'V60',
+        ]);
+
+        $this->assertSame(4.5, $result['clicks_min']);
+        $this->assertSame(5.5, $result['clicks_max']);
+        $this->assertSame('4.5-5.5 on the dial', $result['clicks_label']);
+    }
+
+    public function test_a_stepless_grinder_shifts_by_half_a_point(): void
+    {
+        $result = $this->calibrator->calibrate([
+            'grinder' => 'DF54',
+            'method' => 'V60',
+            'adjustment' => 'coarser',
+        ]);
+
+        $this->assertSame(5.0, $result['clicks_min']);
+        $this->assertSame('5-6 on the dial', $result['clicks_label']);
     }
 
     public function test_a_coarser_adjustment_shifts_the_whole_window_up(): void
@@ -41,8 +69,8 @@ class GrinderCalibratorTest extends TestCase
         ]);
 
         // Comandante's step is 2 clicks.
-        $this->assertSame(22, $result['clicks_min']);
-        $this->assertSame(28, $result['clicks_max']);
+        $this->assertSame(22.0, $result['clicks_min']);
+        $this->assertSame(28.0, $result['clicks_max']);
     }
 
     public function test_a_finer_adjustment_shifts_the_window_down(): void
@@ -53,8 +81,8 @@ class GrinderCalibratorTest extends TestCase
             'adjustment' => 'finer',
         ]);
 
-        $this->assertSame(16, $result['clicks_min']);
-        $this->assertSame(20, $result['clicks_max']);
+        $this->assertSame(16.0, $result['clicks_min']);
+        $this->assertSame(20.0, $result['clicks_max']);
     }
 
     public function test_a_finer_adjustment_can_never_go_below_one_click(): void

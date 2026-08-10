@@ -223,6 +223,7 @@ class GeminiAgent
                 .' — this is the TOTAL finished drink, including any ice',
             "- Taste preference: {$setup['taste']}",
             "- Served: {$setup['serve']}",
+            ...$this->overrideLines($setup),
             ...$this->beanLines($setup),
             "- Grinder: {$setup['grinder']}",
             "- User id for history lookup: {$setup['client_id']}",
@@ -557,6 +558,34 @@ class GeminiAgent
         }
 
         return $recipe;
+    }
+
+    /**
+     * Lines describing anything the user pinned down themselves.
+     *
+     * These are omitted entirely when blank, so the prompt never says "dose: not
+     * specified" — an absent constraint reads more cleanly to the model than a
+     * stated non-constraint.
+     *
+     * @param  array<string, mixed>  $setup
+     * @return array<int, string>
+     */
+    private function overrideLines(array $setup): array
+    {
+        $lines = [];
+
+        if (filled($setup['coffee_grams'] ?? null)) {
+            $lines[] = "- The user has ALREADY weighed out {$setup['coffee_grams']} g of coffee. "
+                .'Pass this to calculate_brew_ratio as coffee_grams; the ratio follows from it. '
+                .'Do not substitute a different dose.';
+        }
+
+        if (filled($setup['ice_grams'] ?? null) && ($setup['serve'] ?? 'Hot') === 'Iced') {
+            $lines[] = "- The user wants {$setup['ice_grams']} g of ice. Pass this to "
+                .'calculate_brew_ratio as ice_grams.';
+        }
+
+        return $lines;
     }
 
     /**
