@@ -19,7 +19,7 @@ class AdjustRecipeRequest extends GenerateRecipeRequest
     public function rules(): array
     {
         return array_merge(parent::rules(), [
-            'feedback' => ['required', 'string', Rule::in(['sour', 'bitter'])],
+            'feedback' => ['required', 'string', Rule::in(['sour', 'bitter', 'weak'])],
 
             'recipe' => ['required', 'array'],
             'recipe.coffee_grams' => ['required', 'numeric'],

@@ -65,7 +65,7 @@ class RecipeController extends Controller
     public function feedback(Request $request, int $brew): JsonResponse
     {
         $validated = $request->validate([
-            'feedback' => ['required', 'string', Rule::in(['sour', 'bitter', 'perfect'])],
+            'feedback' => ['required', 'string', Rule::in(['sour', 'bitter', 'weak', 'perfect'])],
             'client_id' => ['required', 'string', 'alpha_dash', 'max:64'],
         ]);
 

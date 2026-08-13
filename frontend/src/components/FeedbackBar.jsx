@@ -1,7 +1,13 @@
 /**
  * FeedbackBar
- * The adjust loop. "Too sour" / "too bitter" send the current recipe back to
- * Gemini for a diagnosis + fix; "perfect" just shows a confirmation message.
+ * The adjust loop. Anything other than "perfect" sends the current recipe back
+ * to Gemini for a diagnosis and fix; "perfect" just confirms.
+ *
+ * The three faults are not variations of one another. Sour and bitter are
+ * EXTRACTION problems, corrected with grind, temperature and time. Weak is a
+ * CONCENTRATION problem — the extraction may be fine, there is simply too little
+ * coffee for the water — and is corrected with the ratio. The backend keeps them
+ * on separate axes for exactly this reason.
  */
 export default function FeedbackBar({ t, onFeedback, loading, satisfied }) {
   return (
@@ -24,6 +30,14 @@ export default function FeedbackBar({ t, onFeedback, loading, satisfied }) {
           disabled={loading}
         >
           {t.tooBitter}
+        </button>
+        <button
+          type="button"
+          className="btn btn-outline"
+          onClick={() => onFeedback('weak')}
+          disabled={loading}
+        >
+          {t.tooWeak}
         </button>
         <button
           type="button"

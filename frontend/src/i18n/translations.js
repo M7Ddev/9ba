@@ -100,6 +100,7 @@ export const translations = {
     logTitle: 'سجلّ تحضيراتك',
     logHint: 'يستخدم المساعد هذا السجل ليتعلّم ذوقك ويصحّح الوصفات القادمة.',
     logUnrated: 'بدون تقييم',
+    feedbackWeak: 'خفيفة',
     generate: 'أنشئ الوصفة',
     generating: 'جارٍ التحضير…',
     // Shown when the displayed recipe was generated in the other language.
@@ -161,6 +162,7 @@ export const translations = {
     feedbackTitle: 'كيف طلعت؟',
     tooSour: 'طلعت حامضة',
     tooBitter: 'طلعت مرّة',
+    tooWeak: 'طلعت خفيفة',
     perfect: 'ممتازة',
     adjusting: 'جارٍ التعديل…',
     perfectMessage: 'ممتاز! احتفظ بهذه الوصفة وكرّرها بنفس الأرقام. ☕',
@@ -245,6 +247,7 @@ export const translations = {
     logTitle: 'Your brew log',
     logHint: 'The assistant reads this log to learn your palate and pre-correct future recipes.',
     logUnrated: 'Not rated',
+    feedbackWeak: 'Weak',
     generate: 'Generate recipe',
     generating: 'Brewing…',
     // Shown when the displayed recipe was generated in the other language.
@@ -303,6 +306,7 @@ export const translations = {
     feedbackTitle: 'How did it taste?',
     tooSour: 'Too sour',
     tooBitter: 'Too bitter',
+    tooWeak: 'Too weak',
     perfect: 'Perfect',
     adjusting: 'Adjusting…',
     perfectMessage: 'Great! Keep this recipe and repeat it with the same numbers. ☕',

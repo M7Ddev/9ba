@@ -10,6 +10,7 @@ export default function BrewLog({ t, brews }) {
   const feedbackLabel = {
     sour: t.tooSour,
     bitter: t.tooBitter,
+    weak: t.tooWeak,
     perfect: t.perfect,
   };
 

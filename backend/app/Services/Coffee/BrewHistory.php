@@ -88,6 +88,7 @@ class BrewHistory
 
         $sour = $rated->where('feedback', 'sour')->count();
         $bitter = $rated->where('feedback', 'bitter')->count();
+        $weak = $rated->where('feedback', 'weak')->count();
         $perfect = $rated->where('feedback', 'perfect')->count();
 
         return [
@@ -96,13 +97,20 @@ class BrewHistory
             'rated_brews' => $rated->count(),
             'reported_sour' => $sour,
             'reported_bitter' => $bitter,
+            'reported_weak' => $weak,
             'reported_perfect' => $perfect,
             'favourite_origin' => $this->mostCommon($brews, 'origin'),
             'favourite_method' => $this->mostCommon($brews, 'method'),
+
+            // Two independent axes, so two independent tendencies. A user can be
+            // consistently sour AND consistently weak; those need different
+            // corrections and one must not mask the other.
             'tendency' => $this->tendency($sour, $bitter, $rated->count()),
-            'guidance' => 'If a tendency is reported, pre-correct for it in this recipe (sour means '
-                .'under-extraction: grind finer or brew hotter; bitter means over-extraction: grind '
-                .'coarser or brew cooler) and say so in one short sentence in `notes`.',
+            'strength_tendency' => $this->strengthTendency($weak, $rated->count()),
+            'guidance' => 'Pre-correct for any tendency reported above, and say so in one short '
+                .'sentence in `notes`. Extraction faults (sour: grind finer or brew hotter; bitter: '
+                .'grind coarser or brew cooler) are fixed differently from strength faults (weak: use '
+                .'a stronger ratio). If both are reported, apply both — they do not conflict.',
         ];
     }
 
@@ -125,6 +133,25 @@ class BrewHistory
         }
 
         return null;
+    }
+
+    /**
+     * Whether this user's cups keep coming out thin.
+     *
+     * Deliberately separate from tendency(). Weak is not "a bit sour" — it is a
+     * concentration fault, fixed by a stronger ratio rather than by changing
+     * extraction. Folding the two together would produce advice that grinds
+     * finer to fix a watery cup, which makes it sour and no stronger.
+     */
+    private function strengthTendency(int $weak, int $rated): ?string
+    {
+        if ($weak < 2 || $weak < (int) ceil($rated * 0.3)) {
+            return null;
+        }
+
+        return 'This user repeatedly reports WEAK, watery cups. Start from a stronger ratio than the '
+            .'profile default (roughly one to two points lower, e.g. 1:16 -> 1:15), which raises the '
+            .'dose for the same volume. Do not compensate by grinding finer alone.';
     }
 
     /**

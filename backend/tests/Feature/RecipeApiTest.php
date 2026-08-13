@@ -649,6 +649,71 @@ class RecipeApiTest extends TestCase
         $this->assertDatabaseCount('brews', 0);
     }
 
+    /**
+     * A minimal recipe that satisfies AdjustRecipeRequest's validation.
+     *
+     * @return array<string, mixed>
+     */
+    private function validRecipePayload(): array
+    {
+        return [
+            'coffee_grams' => 18.8, 'water_ml' => 300, 'ratio' => '1:16', 'water_temp_c' => 93,
+            'grind_size' => 'medium', 'total_time' => '3:00', 'steps' => ['Brew.'], 'notes' => '',
+        ];
+    }
+
+    /**
+     * Weak is a concentration fault, not an extraction one. The prompt must say
+     * so, because "grind finer" would make a watery cup sour without making it
+     * any stronger.
+     */
+    public function test_a_weak_cup_is_diagnosed_as_concentration_not_extraction(): void
+    {
+        Http::fake(['*' => Http::sequence()->push($this->recipeTurn())]);
+
+        $this->postJson('/api/recipes/adjust', array_merge(self::SETUP, [
+            'feedback' => 'weak',
+            'recipe' => $this->validRecipePayload(),
+        ]))->assertOk();
+
+        Http::assertSent(function ($request) {
+            $prompt = data_get($request->data(), 'contents.0.parts.0.text', '');
+
+            return str_contains($prompt, 'CONCENTRATION problem')
+                && str_contains($prompt, 'RATIO stronger')
+                && str_contains($prompt, 'Do NOT simply grind finer');
+        });
+    }
+
+    public function test_the_three_faults_send_different_diagnoses(): void
+    {
+        $prompts = [];
+
+        foreach (['sour', 'bitter', 'weak'] as $feedback) {
+            // A plain response rather than a sequence: a sequence holding one
+            // entry is exhausted after the first iteration of this loop.
+            Http::fake(['*' => Http::response($this->recipeTurn())]);
+
+            $this->postJson('/api/recipes/adjust', array_merge(self::SETUP, [
+                'feedback' => $feedback,
+                'recipe' => $this->validRecipePayload(),
+            ]))->assertOk();
+
+            Http::assertSent(function ($request) use (&$prompts, $feedback) {
+                $prompts[$feedback] = data_get($request->data(), 'contents.0.parts.0.text', '');
+
+                return true;
+            });
+        }
+
+        $this->assertStringContainsString('under-extraction', $prompts['sour']);
+        $this->assertStringContainsString('over-extraction', $prompts['bitter']);
+        $this->assertStringContainsString('CONCENTRATION', $prompts['weak']);
+
+        // Weak must not be described as an extraction fault at all.
+        $this->assertStringNotContainsString('under-extraction', $prompts['weak']);
+    }
+
     public function test_health_reports_configuration_without_leaking_the_key(): void
     {
         $this->getJson('/api/health')

@@ -252,16 +252,33 @@ class GeminiAgent
      *
      * @param  array{method: string, roast: string, amount_ml: int, taste: string}  $setup
      * @param  array<string, mixed>  $recipe  The recipe the user actually brewed.
-     * @param  'sour'|'bitter'  $feedback
+     * @param  'sour'|'bitter'|'weak'  $feedback
      * @return array<string, mixed>
      *
      * @throws AgentException
      */
     public function adjust(array $setup, array $recipe, string $feedback, string $language): array
     {
-        $symptom = $feedback === 'sour'
-            ? 'The cup tasted SOUR / sharp — a sign of under-extraction.'
-            : 'The cup tasted BITTER / harsh — a sign of over-extraction.';
+        // Sour and bitter are extraction faults; weak is a concentration fault.
+        // They are different axes of the brewing control chart and have
+        // different fixes — grinding finer for a watery cup makes it sour
+        // without making it any stronger.
+        $symptom = match ($feedback) {
+            'sour' => 'The cup tasted SOUR / sharp — a sign of under-extraction. Fix the EXTRACTION: '
+                .'grind finer, brew hotter, or extend the contact time. Keep the ratio unless you '
+                .'explain why it must move.',
+            'bitter' => 'The cup tasted BITTER / harsh — a sign of over-extraction. Fix the '
+                .'EXTRACTION: grind coarser, brew cooler, or shorten the contact time. Keep the ratio '
+                .'unless you explain why it must move.',
+            'weak' => 'The cup tasted WEAK and watery — thin, dilute, like coffee-flavoured water. '
+                .'This is a CONCENTRATION problem, not an extraction one: there is too little coffee '
+                .'for the water. Fix it primarily by making the RATIO stronger (fewer parts water per '
+                .'part coffee, e.g. 1:16 -> 1:14), which raises the dose for the same volume. Do NOT '
+                .'simply grind finer — that pushes extraction up and risks bitterness while leaving '
+                .'the drink just as thin. Only adjust grind or temperature as well if extraction also '
+                .'looks low.',
+            default => 'The cup was not right. Diagnose the most likely cause.',
+        };
 
         $prompt = implode("\n", [
             'The user brewed this recipe:',
