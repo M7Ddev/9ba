@@ -219,8 +219,7 @@ class GeminiAgent
             'Design a brewing recipe for this setup:',
             "- Brew method: {$setup['method']}",
             "- Roast level: {$setup['roast']}",
-            "- Water amount: {$setup['amount_ml']} ml".($setup['method'] === 'Espresso' ? ' (target yield)' : '')
-                .' — this is the TOTAL finished drink, including any ice',
+            $this->amountLine($setup),
             "- Taste preference: {$setup['taste']}",
             "- Served: {$setup['serve']}",
             ...$this->overrideLines($setup),
@@ -284,7 +283,17 @@ class GeminiAgent
             'The user brewed this recipe:',
             json_encode($recipe, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE),
             '',
-            "Setup: {$setup['method']}, {$setup['roast']} roast, {$setup['amount_ml']} ml, preference: {$setup['taste']}.",
+            // On an adjustment the volume is whatever the previous recipe used,
+            // quoted just above, so a blank setup amount is not a gap here.
+            sprintf(
+                'Setup: %s, %s roast, %s, preference: %s.',
+                $setup['method'],
+                $setup['roast'],
+                blank($setup['amount_ml'] ?? null)
+                    ? 'same volume as the recipe above'
+                    : $setup['amount_ml'].' ml',
+                $setup['taste'],
+            ),
             "Beans: {$setup['origin']}, {$setup['process']} process.",
             '',
             $symptom,
@@ -575,6 +584,28 @@ class GeminiAgent
         }
 
         return $recipe;
+    }
+
+    /**
+     * How much drink to make — or that the user did not say.
+     *
+     * When it is blank the model is told to omit water_ml rather than invent a
+     * number, so the volume is derived in PHP: from the dose if there is one,
+     * otherwise from a standard serving for the method.
+     *
+     * @param  array<string, mixed>  $setup
+     */
+    private function amountLine(array $setup): string
+    {
+        if (blank($setup['amount_ml'] ?? null)) {
+            return '- Water amount: NOT SPECIFIED. Omit water_ml when calling calculate_brew_ratio '
+                .'and it will be worked out — do not invent a volume yourself.';
+        }
+
+        $yield = $setup['method'] === 'Espresso' ? ' (target yield)' : '';
+
+        return "- Water amount: {$setup['amount_ml']} ml{$yield} — this is the TOTAL finished drink, "
+            .'including any ice';
     }
 
     /**

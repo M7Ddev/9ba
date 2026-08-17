@@ -60,10 +60,10 @@ export default function RecipeForm({ t, setup, onChange, onSubmit, onScanned, lo
             className="input"
             value={setup.amountMl}
             onChange={update('amountMl')}
+            placeholder={t.autoPlaceholder}
             min="20"
             max="2000"
             step="10"
-            required
           />
         </label>
 

@@ -233,6 +233,43 @@ class BrewRatioCalculatorTest extends TestCase
         $this->assertFalse($result['ice_set_by_user']);
     }
 
+    /**
+     * "I have 18 g in the grinder — how much water?" The volume follows from the
+     * dose and the ratio, which is the way people actually think when scooping.
+     */
+    public function test_a_blank_amount_is_derived_from_the_dose(): void
+    {
+        $result = $this->calculator->calculate([
+            'method' => 'V60', 'ratio' => '1:16', 'coffee_grams' => 18,
+        ]);
+
+        $this->assertSame(18.0, $result['coffee_grams']);
+        $this->assertSame(288, $result['water_ml']); // 18 x 16
+        $this->assertFalse($result['amount_set_by_user']);
+    }
+
+    public function test_a_blank_amount_and_blank_dose_use_the_method_default(): void
+    {
+        $v60 = $this->calculator->calculate(['method' => 'V60', 'ratio' => '1:16']);
+        $press = $this->calculator->calculate(['method' => 'French Press', 'ratio' => '1:15']);
+
+        $this->assertSame(300, $v60['water_ml']);   // one mug
+        $this->assertSame(500, $press['water_ml']); // one small pot
+        $this->assertSame(18.8, $v60['coffee_grams']);
+    }
+
+    public function test_a_given_amount_still_wins(): void
+    {
+        $result = $this->calculator->calculate([
+            'method' => 'V60', 'ratio' => '1:16', 'water_ml' => 500, 'coffee_grams' => 18,
+        ]);
+
+        // Both supplied: the amount is respected and the ratio is derived.
+        $this->assertSame(500, $result['water_ml']);
+        $this->assertSame(18.0, $result['coffee_grams']);
+        $this->assertTrue($result['amount_set_by_user']);
+    }
+
     public function test_the_declaration_lists_every_configured_method(): void
     {
         $declaration = $this->calculator->declaration();

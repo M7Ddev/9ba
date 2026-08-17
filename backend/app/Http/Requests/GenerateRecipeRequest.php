@@ -28,8 +28,10 @@ class GenerateRecipeRequest extends FormRequest
             'method' => ['required', 'string', Rule::in(array_keys(config('coffee.methods')))],
             'roast' => ['required', 'string', Rule::in(config('coffee.roasts'))],
             'taste' => ['required', 'string', Rule::in(config('coffee.tastes'))],
+            // Optional: blank means the amount is derived from the dose, or
+            // from a standard serving for the method.
             'amount_ml' => [
-                'required',
+                'nullable',
                 'integer',
                 'min:'.config('coffee.amount.min'),
                 'max:'.config('coffee.amount.max'),
@@ -62,14 +64,14 @@ class GenerateRecipeRequest extends FormRequest
     /**
      * The validated setup in the shape GeminiAgent expects.
      *
-     * @return array{method: string, roast: string, amount_ml: int, taste: string, origin: string, process: string, flavor_notes: string, grinder: string, client_id: string}
+     * @return array{method: string, roast: string, amount_ml: int|null, taste: string, origin: string, process: string, flavor_notes: string, grinder: string, client_id: string}
      */
     public function setup(): array
     {
         return [
             'method' => $this->string('method')->toString(),
             'roast' => $this->string('roast')->toString(),
-            'amount_ml' => $this->integer('amount_ml'),
+            'amount_ml' => $this->filled('amount_ml') ? $this->integer('amount_ml') : null,
             'taste' => $this->string('taste')->toString(),
             'origin' => $this->string('origin')->toString(),
             'process' => $this->string('process')->toString(),

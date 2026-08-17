@@ -41,7 +41,9 @@ class BrewRatioCalculator
                     ],
                     'water_ml' => [
                         'type' => 'NUMBER',
-                        'description' => 'Total brew water in millilitres (espresso: target yield in ml).',
+                        'description' => 'Total brew water in millilitres (espresso: target yield in ml). '
+                            .'OMIT it if the user did not state an amount — it is then derived from '
+                            .'their dose, or from a standard serving for the method. Do not guess one.',
                     ],
                     'ratio' => [
                         'type' => 'STRING',
@@ -65,7 +67,9 @@ class BrewRatioCalculator
                             .'brew. Omit otherwise and a sensible split is chosen.',
                     ],
                 ],
-                'required' => ['method', 'water_ml', 'ratio'],
+                // water_ml is no longer required: leaving it out is how the model
+                // says "the user did not specify one".
+                'required' => ['method', 'ratio'],
             ],
         ];
     }
@@ -82,10 +86,23 @@ class BrewRatioCalculator
         $method = (string) ($args['method'] ?? '');
         $limits = config("coffee.methods.{$method}") ?? config('coffee.methods.V60');
 
+        // The user may have left the amount blank, in which case it is derived
+        // rather than demanded. Resolved here because deriving it from a dose
+        // needs the ratio, which is not known until the bean profile has run.
+        //
+        // An ABSENT water_ml means "not specified" and is derived below. A
+        // PRESENT but nonsensical one (zero, negative, "abc") is a different
+        // thing — a stated value that is wrong — and is reported rather than
+        // silently swapped for a default.
+        $supplied = ($args['water_ml'] ?? null) !== null && $args['water_ml'] !== '';
         $water = filter_var($args['water_ml'] ?? null, FILTER_VALIDATE_FLOAT);
-        if ($water === false || $water <= 0) {
-            return ['error' => 'water_ml must be a positive number.'];
+
+        if ($supplied && ($water === false || $water <= 0)) {
+            return ['error' => 'water_ml must be a positive number when supplied. Omit it entirely '
+                .'to have the amount derived from the dose or the method default.'];
         }
+
+        $amountFromUser = $water !== false && $water > 0;
 
         // The user may have weighed out a dose already. If so the arithmetic
         // runs the other way: dose + water gives the ratio, instead of ratio +
@@ -96,7 +113,18 @@ class BrewRatioCalculator
         $adjusted = false;
         $unusualRatio = false;
 
-        if ($doseFromUser) {
+        if ($doseFromUser && ! $amountFromUser) {
+            // "I have 18 g in the grinder — how much water?" The ratio comes
+            // from the bean profile, so the volume follows from it.
+            $coffeeGrams = round($userDose, 1);
+
+            $parts = $this->parseRatio($args['ratio'] ?? null);
+            if ($parts === null || $parts < $limits['min'] || $parts > $limits['max']) {
+                $parts = $limits['fallback'];
+            }
+
+            $water = round($coffeeGrams * $parts);
+        } elseif ($doseFromUser) {
             $coffeeGrams = round($userDose, 1);
             $parts = round($water / $coffeeGrams, 2);
 
@@ -114,6 +142,13 @@ class BrewRatioCalculator
                 $adjusted = true;
             }
 
+            // Neither amount nor dose given: fall back to one ordinary serving
+            // for this brewer.
+            if (! $amountFromUser) {
+                $water = (float) (config("coffee.default_amount_ml.{$method}")
+                    ?? config('coffee.default_amount_ml.V60'));
+            }
+
             // 1 ml of water ~= 1 g, the standard assumption in coffee brewing.
             //
             // Computed from the TOTAL liquid, before any ice split: the dose
@@ -128,6 +163,7 @@ class BrewRatioCalculator
             'ratio' => $this->formatRatio($parts),
             'coffee_grams' => $coffeeGrams,
             'dose_set_by_user' => $doseFromUser,
+            'amount_set_by_user' => $amountFromUser,
             ...$this->serveSplit(
                 $method,
                 (string) ($args['serve'] ?? 'Hot'),

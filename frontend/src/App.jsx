@@ -38,7 +38,7 @@ export default function App() {
   const [setup, setSetup] = useState({
     method: 'V60',
     roast: 'Medium',
-    amountMl: 300,
+    amountMl: '',
     taste: 'Balanced',
     // The user's beans — these drive the get_bean_profile tool on the backend.
     origin: 'Colombia',
@@ -144,8 +144,14 @@ export default function App() {
           ? 'MISSING_KEY'
           : null;
 
-  /** Basic client-side guard before we spend an API call. */
+  /**
+   * Basic client-side guard before we spend an API call.
+   * Blank is valid: the backend derives the volume from the dose, or from a
+   * standard serving for the method.
+   */
   function validAmount() {
+    if (setup.amountMl === '' || setup.amountMl === null) return true;
+
     const amount = Number(setup.amountMl);
     return Number.isFinite(amount) && amount >= 20 && amount <= 2000;
   }
@@ -163,7 +169,7 @@ export default function App() {
     try {
       const { recipe: result, brewId: id } = await generateRecipe({
         language: lang,
-        setup: { ...setup, amountMl: Number(setup.amountMl) },
+        setup: { ...setup, amountMl: setup.amountMl === '' ? null : Number(setup.amountMl) },
       });
       setRecipe(result);
       setRecipeLang(lang);
@@ -196,7 +202,7 @@ export default function App() {
     try {
       const { recipe: result, brewId: id } = await adjustRecipe({
         language: lang,
-        setup: { ...setup, amountMl: Number(setup.amountMl) },
+        setup: { ...setup, amountMl: setup.amountMl === '' ? null : Number(setup.amountMl) },
         recipe,
         feedback: kind,
       });

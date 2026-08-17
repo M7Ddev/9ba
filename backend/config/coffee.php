@@ -68,6 +68,22 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Default serving size per method
+    |--------------------------------------------------------------------------
+    | Used when the user leaves the amount blank AND has not given a dose to
+    | derive it from. One ordinary serving for each brewer — a V60 is a mug, a
+    | French press is a small pot, espresso is a double shot's yield.
+    */
+    'default_amount_ml' => [
+        'V60' => 300,
+        'French Press' => 500,
+        'Espresso' => 36,
+        'Moka Pot' => 100,
+        'AeroPress' => 200,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Bean origins
     |--------------------------------------------------------------------------
     | Reference data behind the `get_bean_profile` tool. The model is told to
